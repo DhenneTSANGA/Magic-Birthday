@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  password    String
+  firstName   String
+  lastName    String
+  avatar      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  events      Event[]   @relation("CreatedEvents")
+  invitations Invite[]
+  comments    Comment[]
+  posts       Post[]
+}
+
+model Event {
+  id          String    @id @default(uuid())
+  name        String
+  date        DateTime
+  time        String
+  location    String
+  description String?
+  type        EventType // ENUM: PUBLIC, PRIVATE
+  status      EventStatus // ENUM: DRAFT, PUBLISHED, CANCELLED
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   User      @relation("CreatedEvents", fields: [userId], references: [id])
+  userId      String
+  invites     Invite[]
+  activities  Activity[]
+  comments    Comment[]
+}
+
+model Invite {
+  id        String       @id @default(uuid())
+  event     Event        @relation(fields: [eventId], references: [id])
+  eventId   String
+  user      User         @relation(fields: [userId], references: [id])
+  userId    String
+  status    InviteStatus // ENUM: PENDING, ACCEPTED, DECLINED
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([eventId, userId])
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  duration    Int      // en minutes
+  event       Event    @relation(fields: [eventId], references: [id])
+  eventId     String
+  startTime   DateTime
+  endTime     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Post {
+  id        String     @id @default(uuid())
+  title     String
+  content   String
+  type      PostType   // ENUM: DISCUSSION, ARTICLE, QUESTION
+  author    User       @relation(fields: [userId], references: [id])
+  userId    String
+  likes     Int        @default(0)
+  comments  Comment[]
+  tags      Tag[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  author    User     @relation(fields: [userId], references: [id])
+  userId    String
+  post      Post?    @relation(fields: [postId], references: [id])
+  postId    String?
+  event     Event?   @relation(fields: [eventId], references: [id])
+  eventId   String?
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum EventType {
+  PUBLIC
+  PRIVATE
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum PostType {
+  DISCUSSION
+  ARTICLE
+  QUESTION
+}
+
