@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, User } from "@/utils/supabase";
+import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -23,25 +24,45 @@ export function UserButton() {
     useEffect(() => {
         const checkUser = async () => {
             try {
+                console.log('UserButton - Vérification de l\'utilisateur...');
                 const currentUser = await auth.getCurrentUser();
+                console.log('UserButton - État de l\'utilisateur:', currentUser ? 'Connecté' : 'Non connecté');
                 setUser(currentUser);
             } catch (error) {
-                console.error("Erreur lors de la vérification de l'utilisateur:", error);
+                console.error('UserButton - Erreur lors de la vérification:', error);
             } finally {
                 setLoading(false);
             }
         };
 
         checkUser();
+
+        // Écouter les changements d'authentification
+        const { data: { subscription } } = auth.supabase.auth.onAuthStateChange(
+            (event: AuthChangeEvent, session: Session | null) => {
+                console.log('UserButton - Changement d\'état auth:', event, session ? 'Session présente' : 'Pas de session');
+                if (event === 'SIGNED_IN') {
+                    checkUser();
+                } else if (event === 'SIGNED_OUT') {
+                    setUser(null);
+                }
+            }
+        );
+
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     const handleLogout = async () => {
         try {
+            console.log('UserButton - Déconnexion...');
             await auth.logout();
+            setUser(null);
             router.push("/sign-in");
             router.refresh();
         } catch (error) {
-            console.error("Erreur lors de la déconnexion:", error);
+            console.error('UserButton - Erreur lors de la déconnexion:', error);
         }
     };
 

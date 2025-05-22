@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // URL directe pour les migrations
 }
 
 model User {
@@ -23,17 +24,21 @@ model User {
   invitations Invite[]
   comments    Comment[]
   posts       Post[]
+
+  @@map("users") // Nom de la table dans la base de données
 }
 
 model Event {
   id          String    @id @default(uuid())
+  code        String    @unique // Code unique pour l'accès à l'événement
   name        String
   date        DateTime
   time        String
   location    String
   description String?
-  type        EventType // ENUM: PUBLIC, PRIVATE
-  status      EventStatus // ENUM: DRAFT, PUBLISHED, CANCELLED
+  type        EventType @default(PUBLIC)
+  status      EventStatus @default(DRAFT)
+  maxGuests   Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   createdBy   User      @relation("CreatedEvents", fields: [userId], references: [id])
@@ -41,6 +46,10 @@ model Event {
   invites     Invite[]
   activities  Activity[]
   comments    Comment[]
+
+  @@index([code])
+  @@index([userId])
+  @@map("events")
 }
 
 model Invite {
@@ -49,11 +58,14 @@ model Invite {
   eventId   String
   user      User         @relation(fields: [userId], references: [id])
   userId    String
-  status    InviteStatus // ENUM: PENDING, ACCEPTED, DECLINED
+  status    InviteStatus @default(PENDING)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
   @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+  @@map("invites")
 }
 
 model Activity {
@@ -67,13 +79,16 @@ model Activity {
   endTime     DateTime
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([eventId])
+  @@map("activities")
 }
 
 model Post {
   id        String     @id @default(uuid())
   title     String
   content   String
-  type      PostType   // ENUM: DISCUSSION, ARTICLE, QUESTION
+  type      PostType   @default(DISCUSSION)
   author    User       @relation(fields: [userId], references: [id])
   userId    String
   likes     Int        @default(0)
@@ -81,6 +96,9 @@ model Post {
   tags      Tag[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+
+  @@index([userId])
+  @@map("posts")
 }
 
 model Comment {
@@ -95,6 +113,11 @@ model Comment {
   likes     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([postId])
+  @@index([eventId])
+  @@map("comments")
 }
 
 model Tag {
@@ -103,6 +126,8 @@ model Tag {
   posts     Post[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("tags")
 }
 
 enum EventType {

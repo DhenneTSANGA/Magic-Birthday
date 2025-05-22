@@ -2,17 +2,29 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, Calendar, Clock, MapPin, PartyPopper } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import { EventSummaryDialog } from "@/components/EventSummaryDialog"
+import { generateEventCode, createEvent } from "@/utils/event"
 
 export default function CreerEvenementPage() {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [showSummary, setShowSummary] = useState(false)
+  const [eventData, setEventData] = useState<{
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    description?: string;
+    code: string;
+  } | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -22,18 +34,47 @@ export default function CreerEvenementPage() {
     maxGuests: "",
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      // TODO: Implement event creation logic without Supabase
-      toast.success("Événement créé avec succès !")
-      // Redirect to community page after successful creation
-      window.location.href = "/communaute"
+      const code = generateEventCode()
+      const eventData = {
+        name: formData.title,
+        date: new Date(formData.date),
+        time: formData.time,
+        location: formData.location,
+        description: formData.description,
+        type: formData.type,
+        maxGuests: parseInt(formData.maxGuests) || 0,
+      }
+
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erreur lors de la création de l\'événement')
+      }
+
+      const event = await response.json()
+      setEventData(event)
+      toast.success('Événement créé avec succès !')
+      setShowSummary(true)
+
+      // Redirection après 2 secondes
+      setTimeout(() => {
+        router.push('/mes-evenements')
+      }, 2000)
     } catch (error) {
-      console.error("Error creating event:", error)
-      toast.error("Une erreur est survenue lors de la création de l'événement")
+      console.error('Erreur:', error)
+      toast.error(error instanceof Error ? error.message : 'Une erreur est survenue')
     } finally {
       setIsLoading(false)
     }
@@ -47,9 +88,9 @@ export default function CreerEvenementPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        <Link href="/communaute" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6">
+        <Link href="/mes-evenements" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Retour à la communauté
+          Retour à mes événements
         </Link>
 
         <Card>
@@ -159,6 +200,14 @@ export default function CreerEvenementPage() {
           </form>
         </Card>
       </div>
+
+      {eventData && (
+        <EventSummaryDialog
+          isOpen={showSummary}
+          onClose={() => setShowSummary(false)}
+          eventData={eventData}
+        />
+      )}
     </div>
   )
 }

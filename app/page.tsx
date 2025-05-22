@@ -25,6 +25,12 @@ export default function Home() {
             >
               Créer un événement
             </Link>
+            <Link
+              href="/mes-evenements"
+              className="text-sm font-medium text-gray-600 transition-colors hover:text-primary"
+            >
+              Mes événements
+            </Link>
             <Link href="/communaute" className="text-sm font-medium text-gray-600 transition-colors hover:text-primary">
               Communauté
             </Link>
@@ -47,13 +53,13 @@ export default function Home() {
             <Calendar className="h-5 w-5 text-gray-600" />
             <span className="text-xs text-gray-600">Créer</span>
           </Link>
+          <Link href="/mes-evenements" className="flex flex-1 flex-col items-center py-2">
+            <Gift className="h-5 w-5 text-gray-600" />
+            <span className="text-xs text-gray-600">Mes événements</span>
+          </Link>
           <Link href="/communaute" className="flex flex-1 flex-col items-center py-2">
             <MessageCircle className="h-5 w-5 text-gray-600" />
             <span className="text-xs text-gray-600">Communauté</span>
-          </Link>
-          <Link href="/mon-compte" className="flex flex-1 flex-col items-center py-2">
-            <Users className="h-5 w-5 text-gray-600" />
-            <span className="text-xs text-gray-600">Profil</span>
           </Link>
         </div>
       </div>
