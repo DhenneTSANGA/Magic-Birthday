@@ -6,18 +6,27 @@ export function useEvents() {
   const [loading, setLoading] = useState(false)
   const [events, setEvents] = useState<Event[]>([])
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   // Récupérer tous les événements
   const fetchEvents = async () => {
     try {
       setLoading(true)
+      setError(null)
       const response = await fetch('/api/events')
-      if (!response.ok) throw new Error('Erreur lors de la récupération des événements')
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erreur lors de la récupération des événements')
+      }
+      
       const data = await response.json()
       setEvents(data)
     } catch (error) {
       console.error('Erreur:', error)
-      toast.error('Impossible de récupérer les événements')
+      const message = error instanceof Error ? error.message : 'Impossible de récupérer les événements'
+      setError(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -27,14 +36,22 @@ export function useEvents() {
   const fetchEvent = async (code: string) => {
     try {
       setLoading(true)
+      setError(null)
       const response = await fetch(`/api/events/${code}`)
-      if (!response.ok) throw new Error('Événement non trouvé')
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Événement non trouvé')
+      }
+      
       const data = await response.json()
       setCurrentEvent(data)
       return data
     } catch (error) {
       console.error('Erreur:', error)
-      toast.error('Impossible de récupérer l\'événement')
+      const message = error instanceof Error ? error.message : 'Impossible de récupérer l\'événement'
+      setError(message)
+      toast.error(message)
       return null
     } finally {
       setLoading(false)
@@ -45,19 +62,27 @@ export function useEvents() {
   const createEvent = async (data: CreateEventData) => {
     try {
       setLoading(true)
+      setError(null)
       const response = await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (!response.ok) throw new Error('Erreur lors de la création de l\'événement')
+      
+      if (!response.ok) {
+        const responseData = await response.json()
+        throw new Error(responseData.error || 'Erreur lors de la création de l\'événement')
+      }
+      
       const newEvent = await response.json()
       setEvents((prev) => [...prev, newEvent])
       toast.success('Événement créé avec succès')
       return newEvent
     } catch (error) {
       console.error('Erreur:', error)
-      toast.error('Impossible de créer l\'événement')
+      const message = error instanceof Error ? error.message : 'Impossible de créer l\'événement'
+      setError(message)
+      toast.error(message)
       return null
     } finally {
       setLoading(false)
@@ -68,12 +93,18 @@ export function useEvents() {
   const updateEvent = async (code: string, data: UpdateEventData) => {
     try {
       setLoading(true)
+      setError(null)
       const response = await fetch(`/api/events/${code}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (!response.ok) throw new Error('Erreur lors de la mise à jour de l\'événement')
+      
+      if (!response.ok) {
+        const responseData = await response.json()
+        throw new Error(responseData.error || 'Erreur lors de la mise à jour de l\'événement')
+      }
+      
       const updatedEvent = await response.json()
       setEvents((prev) => prev.map((event) => (event.code === code ? updatedEvent : event)))
       setCurrentEvent(updatedEvent)
@@ -81,7 +112,9 @@ export function useEvents() {
       return updatedEvent
     } catch (error) {
       console.error('Erreur:', error)
-      toast.error('Impossible de mettre à jour l\'événement')
+      const message = error instanceof Error ? error.message : 'Impossible de mettre à jour l\'événement'
+      setError(message)
+      toast.error(message)
       return null
     } finally {
       setLoading(false)
@@ -92,16 +125,24 @@ export function useEvents() {
   const deleteEvent = async (code: string) => {
     try {
       setLoading(true)
+      setError(null)
       const response = await fetch(`/api/events/${code}`, {
         method: 'DELETE',
       })
-      if (!response.ok) throw new Error('Erreur lors de la suppression de l\'événement')
+      
+      if (!response.ok) {
+        const responseData = await response.json()
+        throw new Error(responseData.error || 'Erreur lors de la suppression de l\'événement')
+      }
+      
       setEvents((prev) => prev.filter((event) => event.code !== code))
       setCurrentEvent(null)
       toast.success('Événement supprimé avec succès')
     } catch (error) {
       console.error('Erreur:', error)
-      toast.error('Impossible de supprimer l\'événement')
+      const message = error instanceof Error ? error.message : 'Impossible de supprimer l\'événement'
+      setError(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -111,6 +152,7 @@ export function useEvents() {
     loading,
     events,
     currentEvent,
+    error,
     fetchEvents,
     fetchEvent,
     createEvent,

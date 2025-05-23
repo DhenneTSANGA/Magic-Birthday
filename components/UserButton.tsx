@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth, User } from "@/utils/supabase";
-import { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import { createBrowserClient } from '@supabase/ssr';
+import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -16,6 +16,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2 } from "lucide-react";
 
+// Initialisation du client Supabase
+const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 export function UserButton() {
     const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
@@ -25,11 +31,32 @@ export function UserButton() {
         const checkUser = async () => {
             try {
                 console.log('UserButton - Vérification de l\'utilisateur...');
-                const currentUser = await auth.getCurrentUser();
-                console.log('UserButton - État de l\'utilisateur:', currentUser ? 'Connecté' : 'Non connecté');
-                setUser(currentUser);
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    console.error('UserButton - Erreur de session:', sessionError);
+                    setUser(null);
+                    return;
+                }
+
+                if (!session) {
+                    console.log('UserButton - Aucune session active');
+                    setUser(null);
+                    return;
+                }
+
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError) {
+                    console.error('UserButton - Erreur utilisateur:', userError);
+                    setUser(null);
+                    return;
+                }
+
+                console.log('UserButton - Utilisateur connecté:', user?.email);
+                setUser(user);
             } catch (error) {
                 console.error('UserButton - Erreur lors de la vérification:', error);
+                setUser(null);
             } finally {
                 setLoading(false);
             }
@@ -38,11 +65,12 @@ export function UserButton() {
         checkUser();
 
         // Écouter les changements d'authentification
-        const { data: { subscription } } = auth.supabase.auth.onAuthStateChange(
-            (event: AuthChangeEvent, session: Session | null) => {
-                console.log('UserButton - Changement d\'état auth:', event, session ? 'Session présente' : 'Pas de session');
-                if (event === 'SIGNED_IN') {
-                    checkUser();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+                console.log('UserButton - Changement d\'état auth:', event);
+                if (event === 'SIGNED_IN' && session) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    setUser(user);
                 } else if (event === 'SIGNED_OUT') {
                     setUser(null);
                 }
@@ -57,7 +85,9 @@ export function UserButton() {
     const handleLogout = async () => {
         try {
             console.log('UserButton - Déconnexion...');
-            await auth.logout();
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+            
             setUser(null);
             router.push("/sign-in");
             router.refresh();
@@ -92,10 +122,10 @@ export function UserButton() {
         );
     }
 
-    const initials = user.name
-        ? user.name
+    const initials = user.user_metadata?.name
+        ? user.user_metadata.name
               .split(" ")
-              .map((n) => n[0])
+              .map((n: string) => n[0])
               .join("")
               .toUpperCase()
         : user.email?.[0].toUpperCase() || "U";
@@ -108,7 +138,7 @@ export function UserButton() {
                     className="relative h-8 w-8 rounded-full"
                 >
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src="" alt={user.name || user.email || ""} />
+                        <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.name || user.email || ""} />
                         <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
                 </Button>
@@ -117,7 +147,7 @@ export function UserButton() {
                 <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">
-                            {user.name || "Utilisateur"}
+                            {user.user_metadata?.name || "Utilisateur"}
                         </p>
                         <p className="text-xs leading-none text-muted-foreground">
                             {user.email}

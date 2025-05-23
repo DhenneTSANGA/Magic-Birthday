@@ -32,6 +32,7 @@ export default function CreerEvenementPage() {
     time: "",
     location: "",
     maxGuests: "",
+    type: "PUBLIC" as const,
   })
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -39,7 +40,6 @@ export default function CreerEvenementPage() {
     setIsLoading(true)
 
     try {
-      const code = generateEventCode()
       const eventData = {
         name: formData.title,
         date: new Date(formData.date),
@@ -64,7 +64,14 @@ export default function CreerEvenementPage() {
       }
 
       const event = await response.json()
-      setEventData(event)
+      setEventData({
+        id: event.id,
+        title: event.name,
+        date: event.date,
+        location: event.location,
+        description: event.description,
+        code: event.code,
+      })
       toast.success('Événement créé avec succès !')
       setShowSummary(true)
 
@@ -189,6 +196,21 @@ export default function CreerEvenementPage() {
                   placeholder="Ex: 20"
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type">Type d'événement</Label>
+                <select
+                  id="type"
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  required
+                >
+                  <option value="PUBLIC">Public</option>
+                  <option value="PRIVATE">Privé</option>
+                </select>
               </div>
             </CardContent>
 

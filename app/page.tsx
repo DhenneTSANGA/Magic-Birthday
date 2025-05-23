@@ -2,67 +2,10 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Calendar, Gift, MessageCircle, PartyPopper, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ThemeSelector } from "@/components/theme-selector"
-import { UserButton } from "@/components/UserButton"
 
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 to-blue-50 data-[theme=green]:from-emerald-50 data-[theme=green]:to-green-50 data-[theme=purple]:from-violet-50 data-[theme=purple]:to-purple-50 data-[theme=orange]:from-amber-50 data-[theme=orange]:to-orange-50 data-[theme=red]:from-rose-50 data-[theme=red]:to-red-50">
-      {/* Navigation */}
-      <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur-md">
-        <div className="container flex h-16 items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-2">
-            <PartyPopper className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold text-primary">MAGIC BIRTHDAY</span>
-          </div>
-          <nav className="hidden gap-6 md:flex">
-            <Link href="/" className="text-sm font-medium text-primary transition-colors hover:text-primary/80">
-              Accueil
-            </Link>
-            <Link
-              href="/creer-evenement"
-              className="text-sm font-medium text-gray-600 transition-colors hover:text-primary"
-            >
-              Créer un événement
-            </Link>
-            <Link
-              href="/mes-evenements"
-              className="text-sm font-medium text-gray-600 transition-colors hover:text-primary"
-            >
-              Mes événements
-            </Link>
-            <Link href="/communaute" className="text-sm font-medium text-gray-600 transition-colors hover:text-primary">
-              Communauté
-            </Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <ThemeSelector />
-            <UserButton />
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white md:hidden">
-        <div className="flex items-center justify-around">
-          <Link href="/" className="flex flex-1 flex-col items-center py-2">
-            <PartyPopper className="h-5 w-5 text-primary" />
-            <span className="text-xs text-primary">Accueil</span>
-          </Link>
-          <Link href="/creer-evenement" className="flex flex-1 flex-col items-center py-2">
-            <Calendar className="h-5 w-5 text-gray-600" />
-            <span className="text-xs text-gray-600">Créer</span>
-          </Link>
-          <Link href="/mes-evenements" className="flex flex-1 flex-col items-center py-2">
-            <Gift className="h-5 w-5 text-gray-600" />
-            <span className="text-xs text-gray-600">Mes événements</span>
-          </Link>
-          <Link href="/communaute" className="flex flex-1 flex-col items-center py-2">
-            <MessageCircle className="h-5 w-5 text-gray-600" />
-            <span className="text-xs text-gray-600">Communauté</span>
-          </Link>
-        </div>
-      </div>
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/90 via-primary to-primary/80 py-20 text-white">
@@ -104,12 +47,11 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row ">
-              <Button className="bg-white text-primary hover:bg-white/90">
-                <Link href="/creer-evenement" passHref>
-                  Créer un événement
-                  
-                </Link>
-              </Button>
+                <Button className="bg-white text-primary hover:bg-white/90">
+                  <Link href="/creer-evenement" passHref>
+                    Créer un événement
+                  </Link>
+                </Button>
                 <Button variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20">
                   En savoir plus
                 </Button>
@@ -207,8 +149,8 @@ export default function Home() {
                   Rejoignez notre communauté et commencez à organiser des anniversaires mémorables dès aujourd&apos;hui.
                 </p>
                 <Link href="/creer-evenement" passHref>
-                <Button className="mt-2">Créer mon premier événement</Button>
-              </Link>
+                  <Button className="mt-2">Créer mon premier événement</Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -319,10 +261,9 @@ export default function Home() {
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
-            <Button className="bg-white text-primary hover:bg-white/90">
+              <Button className="bg-white text-primary hover:bg-white/90">
                 <Link href="/creer-evenement" passHref>
                   Créer un événement
-                  
                 </Link>
               </Button>
               <Button variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20">
@@ -332,91 +273,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-gradient-to-br from-slate-900 to-primary-foreground py-12 text-white">
-        <div className="container px-4 md:px-6">
-          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <PartyPopper className="h-6 w-6 text-primary/80" />
-                <span className="text-xl font-bold text-white">MAGIC BIRTHDAY</span>
-              </div>
-              <p className="text-sm text-white/70">
-                La plateforme qui rend l&apos;organisation d&apos;anniversaires accessible et agréable.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <h3 className="font-medium text-primary/80">Liens rapides</h3>
-              <ul className="space-y-2 text-sm text-white/70">
-                <li>
-                  <Link href="/" className="hover:text-white">
-                    Accueil
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/creer-evenement" className="hover:text-white">
-                    Créer un événement
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/communaute" className="hover:text-white">
-                    Communauté
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h3 className="font-medium text-primary/80">Ressources</h3>
-              <ul className="space-y-2 text-sm text-white/70">
-                <li>
-                  <Link href="#" className="hover:text-white">
-                    Blog
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-white">
-                    Guides
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-white">
-                    FAQ
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-white">
-                    Support
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h3 className="font-medium text-primary/80">Légal</h3>
-              <ul className="space-y-2 text-sm text-white/70">
-                <li>
-                  <Link href="#" className="hover:text-white">
-                    Conditions d&apos;utilisation
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-white">
-                    Politique de confidentialité
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-white">
-                    Mentions légales
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-12 border-t border-white/10 pt-6 text-center text-sm text-white/50">
-            <p>© 2025 MAGIC BIRTHDAY. Tous droits réservés.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }
