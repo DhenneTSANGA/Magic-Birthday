@@ -26,7 +26,7 @@ export default function CreerEvenementPage() {
     code: string;
   } | null>(null)
   const [formData, setFormData] = useState({
-    title: "",
+    name: "",
     description: "",
     date: "",
     time: "",
@@ -40,15 +40,20 @@ export default function CreerEvenementPage() {
     setIsLoading(true)
 
     try {
+      // Formater la date correctement
+      const formattedDate = new Date(formData.date + 'T' + formData.time).toISOString()
+
       const eventData = {
-        name: formData.title,
-        date: new Date(formData.date),
+        name: formData.name,
+        date: formattedDate,
         time: formData.time,
         location: formData.location,
         description: formData.description,
         type: formData.type,
         maxGuests: parseInt(formData.maxGuests) || 0,
       }
+
+      console.log('Données envoyées:', eventData)
 
       const response = await fetch('/api/events', {
         method: 'POST',
@@ -58,36 +63,45 @@ export default function CreerEvenementPage() {
         body: JSON.stringify(eventData),
       })
 
+      const responseData = await response.json()
+      console.log('Réponse complète du serveur:', responseData)
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Erreur lors de la création de l\'événement')
+        throw new Error(
+          responseData.details || 
+          responseData.error || 
+          'Erreur lors de la création de l\'événement'
+        )
       }
 
-      const event = await response.json()
       setEventData({
-        id: event.id,
-        title: event.name,
-        date: event.date,
-        location: event.location,
-        description: event.description,
-        code: event.code,
+        id: responseData.id,
+        title: responseData.name,
+        date: responseData.date,
+        location: responseData.location,
+        description: responseData.description,
+        code: responseData.code,
       })
       toast.success('Événement créé avec succès !')
       setShowSummary(true)
 
-      // Redirection après 2 secondes
-      setTimeout(() => {
-        router.push('/mes-evenements')
-      }, 2000)
+      // Redirection immédiate vers la page des événements
+      router.push('/mes-evenements?refresh=true')
     } catch (error) {
-      console.error('Erreur:', error)
-      toast.error(error instanceof Error ? error.message : 'Une erreur est survenue')
+      console.error('Erreur détaillée:', error)
+      toast.error(
+        error instanceof Error 
+          ? error.message 
+          : 'Une erreur est survenue lors de la création de l\'événement'
+      )
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
@@ -111,11 +125,11 @@ export default function CreerEvenementPage() {
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="title">Titre de l'événement</Label>
+                <Label htmlFor="name">Titre de l'événement</Label>
                 <Input
-                  id="title"
-                  name="title"
-                  value={formData.title}
+                  id="name"
+                  name="name"
+                  value={formData.name}
                   onChange={handleChange}
                   placeholder="Ex: Anniversaire surprise de Marie"
                   required

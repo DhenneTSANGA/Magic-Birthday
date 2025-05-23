@@ -25,19 +25,42 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 type EventStatus = 'all' | 'draft' | 'published' | 'cancelled'
 type EventType = 'all' | 'public' | 'private'
 
 export function EventList() {
-  const { loading, events, fetchEvents } = useEvents()
+  const { loading, events, fetchEvents, error } = useEvents()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<EventStatus>('all')
   const [typeFilter, setTypeFilter] = useState<EventType>('all')
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    fetchEvents()
-  }, [fetchEvents])
+    console.log('EventList - useEffect - État initial:', { loading, eventsCount: events.length, error })
+    
+    // Recharger les événements si on arrive avec le paramètre refresh
+    if (searchParams.get('refresh') === 'true') {
+      console.log('EventList - Rechargement forcé des événements')
+      fetchEvents()
+      // Nettoyer l'URL
+      router.replace('/mes-evenements', { scroll: false })
+    } else {
+      console.log('EventList - Chargement initial des événements')
+      fetchEvents()
+    }
+  }, [fetchEvents, searchParams, router])
+
+  useEffect(() => {
+    console.log('EventList - Mise à jour des événements:', { 
+      loading, 
+      eventsCount: events.length, 
+      error,
+      filteredCount: filteredEvents.length 
+    })
+  }, [loading, events, error])
 
   const filteredEvents = events.filter((event) => {
     const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -50,7 +73,19 @@ export function EventList() {
     return matchesSearch && matchesStatus && matchesType
   })
 
-  if (loading) {
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-destructive">Erreur: {error}</p>
+        <Button onClick={() => fetchEvents()} className="mt-4">
+          Réessayer
+        </Button>
+      </div>
+    )
+  }
+
+  if (loading && events.length === 0) {
+    console.log('EventList - Affichage du chargement (aucun événement)')
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[...Array(6)].map((_, i) => (
@@ -71,6 +106,12 @@ export function EventList() {
       </div>
     )
   }
+
+  console.log('EventList - Rendu final:', { 
+    eventsCount: events.length, 
+    filteredCount: filteredEvents.length,
+    loading 
+  })
 
   return (
     <div className="space-y-4">
@@ -111,7 +152,16 @@ export function EventList() {
       {/* Liste des événements */}
       {filteredEvents.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-muted-foreground">Aucun événement trouvé</p>
+          <p className="text-muted-foreground">
+            {events.length === 0 ? "Vous n'avez pas encore d'événements" : "Aucun événement ne correspond à vos critères"}
+          </p>
+          {events.length === 0 && (
+            <Button asChild className="mt-4">
+              <Link href="/creer-evenement">
+                Créer votre premier événement
+              </Link>
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -168,7 +218,7 @@ function EventCard({ event }: { event: Event }) {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Users className="h-4 w-4" />
           <span>
-            {event.invites?.length || 0} / {event.maxGuests || '∞'} invités
+            {event._count?.invites || 0} / {event.maxGuests || '∞'} invités
           </span>
         </div>
       </CardContent>

@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { Event, CreateEventData, UpdateEventData } from '@/utils/event'
 
 export function useEvents() {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [events, setEvents] = useState<Event[]>([])
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -11,24 +11,37 @@ export function useEvents() {
   // Récupérer tous les événements
   const fetchEvents = async () => {
     try {
+      console.log('useEvents - Début de la récupération des événements')
       setLoading(true)
       setError(null)
+      
       const response = await fetch('/api/events')
+      console.log('useEvents - Réponse du serveur:', response.status)
+      
+      const data = await response.json()
+      console.log('useEvents - Données reçues:', data)
       
       if (!response.ok) {
-        const data = await response.json()
+        console.error('useEvents - Erreur serveur:', data)
         throw new Error(data.error || 'Erreur lors de la récupération des événements')
       }
       
-      const data = await response.json()
+      if (!Array.isArray(data)) {
+        console.error('useEvents - Données invalides:', data)
+        throw new Error('Format de données invalide')
+      }
+
       setEvents(data)
+      console.log('useEvents - Événements mis à jour:', data.length)
     } catch (error) {
-      console.error('Erreur:', error)
+      console.error('useEvents - Erreur détaillée:', error)
       const message = error instanceof Error ? error.message : 'Impossible de récupérer les événements'
       setError(message)
       toast.error(message)
+      setEvents([])
     } finally {
       setLoading(false)
+      console.log('useEvents - État final:', { loading: false, eventsCount: events.length, error: null })
     }
   }
 
@@ -38,13 +51,12 @@ export function useEvents() {
       setLoading(true)
       setError(null)
       const response = await fetch(`/api/events/${code}`)
+      const data = await response.json()
       
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.error || 'Événement non trouvé')
       }
       
-      const data = await response.json()
       setCurrentEvent(data)
       return data
     } catch (error) {
@@ -69,15 +81,15 @@ export function useEvents() {
         body: JSON.stringify(data),
       })
       
+      const responseData = await response.json()
+      
       if (!response.ok) {
-        const responseData = await response.json()
         throw new Error(responseData.error || 'Erreur lors de la création de l\'événement')
       }
       
-      const newEvent = await response.json()
-      setEvents((prev) => [...prev, newEvent])
+      setEvents((prev) => [...prev, responseData])
       toast.success('Événement créé avec succès')
-      return newEvent
+      return responseData
     } catch (error) {
       console.error('Erreur:', error)
       const message = error instanceof Error ? error.message : 'Impossible de créer l\'événement'
@@ -100,16 +112,16 @@ export function useEvents() {
         body: JSON.stringify(data),
       })
       
+      const responseData = await response.json()
+      
       if (!response.ok) {
-        const responseData = await response.json()
         throw new Error(responseData.error || 'Erreur lors de la mise à jour de l\'événement')
       }
       
-      const updatedEvent = await response.json()
-      setEvents((prev) => prev.map((event) => (event.code === code ? updatedEvent : event)))
-      setCurrentEvent(updatedEvent)
+      setEvents((prev) => prev.map((event) => (event.code === code ? responseData : event)))
+      setCurrentEvent(responseData)
       toast.success('Événement mis à jour avec succès')
-      return updatedEvent
+      return responseData
     } catch (error) {
       console.error('Erreur:', error)
       const message = error instanceof Error ? error.message : 'Impossible de mettre à jour l\'événement'

@@ -58,26 +58,35 @@ export function formatDate(date: string | Date): string {
 export interface Event {
     id: string;
     code: string;
-    title: string;
-    date: string;
+    name: string;
+    date: Date;
+    time: string;
     location: string;
     description?: string;
+    type: EventType;
+    status: EventStatus;
     maxGuests: number;
-    createdBy: string;
-    createdAt: string;
-    updatedAt: string;
+    userId: string;
+    createdBy: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        avatar: string | null;
+    };
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 // Types
 export type CreateEventData = {
-  name: string
-  date: Date
-  time: string
-  location: string
-  description?: string
-  type?: EventType
-  maxGuests?: number
-  userId: string
+    name: string;
+    date: string | Date;
+    time: string;
+    location: string;
+    description?: string;
+    type?: EventType;
+    maxGuests?: number;
+    userId: string;
 }
 
 export type UpdateEventData = Partial<CreateEventData> & {
@@ -85,37 +94,109 @@ export type UpdateEventData = Partial<CreateEventData> & {
 }
 
 /**
+ * Vérifie si l'utilisateur existe et le crée si nécessaire
+ * @param userId L'ID de l'utilisateur Supabase
+ * @returns L'utilisateur Prisma
+ */
+async function ensureUserExists(userId: string) {
+  try {
+    // Vérifier si l'utilisateur existe déjà
+    let user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      // Créer l'utilisateur dans Prisma avec des valeurs par défaut
+      // Les informations détaillées seront mises à jour plus tard
+      user = await prisma.user.create({
+        data: {
+          id: userId,
+          email: `${userId}@temp.com`, // Email temporaire
+          firstName: 'Utilisateur',
+          lastName: 'Anonyme',
+          password: '', // Le mot de passe est géré par Supabase
+        }
+      });
+
+      console.log('Utilisateur créé dans Prisma:', user);
+    }
+
+    return user;
+  } catch (error) {
+    console.error('Erreur lors de la vérification/création de l\'utilisateur:', error);
+    throw new Error('Impossible de vérifier/créer l\'utilisateur');
+  }
+}
+
+/**
  * Crée un nouvel événement dans la base de données
  * @param eventData Les données de l'événement à créer
- * @returns L'événement créé ou null en cas d'erreur
+ * @returns L'événement créé
  */
 export async function createEvent(data: CreateEventData): Promise<Event> {
-  try {
-    const code = generateEventCode()
-    const event = await prisma.event.create({
-      data: {
-        ...data,
-        code,
-        status: 'DRAFT',
-        type: data.type || 'PUBLIC',
-        maxGuests: data.maxGuests || 0,
-      },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-          },
-        },
-      },
-    })
-    return event
-  } catch (error) {
-    console.error('Error creating event:', error)
-    throw new Error('Failed to create event')
-  }
+    try {
+        const code = generateEventCode()
+        console.log('Données reçues dans createEvent:', data)
+
+        // S'assurer que l'utilisateur existe
+        await ensureUserExists(data.userId);
+
+        // S'assurer que la date est un objet Date
+        const eventDate = data.date instanceof Date ? data.date : new Date(data.date)
+
+        const event = await prisma.event.create({
+            data: {
+                name: data.name,
+                date: eventDate,
+                time: data.time,
+                location: data.location,
+                description: data.description,
+                type: data.type || 'PUBLIC',
+                maxGuests: data.maxGuests || 0,
+                userId: data.userId,
+                code,
+                status: 'DRAFT',
+            },
+            include: {
+                createdBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                    },
+                },
+            },
+        })
+
+        console.log('Événement créé dans la base de données:', event)
+
+        // Transformer l'événement pour correspondre à l'interface Event
+        const transformedEvent: Event = {
+            id: event.id,
+            code: event.code,
+            name: event.name,
+            date: event.date,
+            time: event.time,
+            location: event.location,
+            description: event.description || undefined,
+            type: event.type,
+            status: event.status,
+            maxGuests: event.maxGuests,
+            userId: event.userId,
+            createdBy: event.createdBy,
+            createdAt: event.createdAt,
+            updatedAt: event.updatedAt,
+        }
+
+        return transformedEvent
+    } catch (error) {
+        console.error('Erreur détaillée dans createEvent:', error)
+        if (error instanceof Error) {
+            throw new Error(`Failed to create event: ${error.message}`)
+        }
+        throw new Error('Failed to create event')
+    }
 }
 
 /**
@@ -193,6 +274,18 @@ export async function getUserEvents(userId: string): Promise<Event[]> {
             firstName: true,
             lastName: true,
             avatar: true,
+          },
+        },
+        invites: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
           },
         },
         _count: {
