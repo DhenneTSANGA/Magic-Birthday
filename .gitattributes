@@ -1,0 +1,10 @@
+# Définir le comportement par défaut pour tous les fichiers
+* text=auto eol=lf
+
+# Fichiers spécifiques qui doivent toujours utiliser CRLF
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf
+
+# Fichiers binaires qui ne doivent pas être modifiés
+*.{png,jpg,jpeg,gif,webp,ico,svg,woff,woff2,ttf,eot} binary
+*.{zip,rar,7z,tar,gz,exe,dll,so,dylib} binary 
