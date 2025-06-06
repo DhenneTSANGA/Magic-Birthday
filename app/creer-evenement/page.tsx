@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { EventSummaryDialog } from "@/components/EventSummaryDialog"
 import { generateEventCode, createEvent } from "@/utils/event"
+import { supabase } from "@/lib/supabase"
 
 export default function CreerEvenementPage() {
   const router = useRouter()
@@ -35,65 +36,48 @@ export default function CreerEvenementPage() {
     type: "PUBLIC" as const,
   })
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      // Formater la date correctement
-      const formattedDate = new Date(formData.date + 'T' + formData.time).toISOString()
+      // Récupérer l'utilisateur actuel
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        throw new Error('Utilisateur non connecté')
+      }
+
+      console.log('User data:', user)
 
       const eventData = {
         name: formData.name,
-        date: formattedDate,
+        description: formData.description,
+        date: formData.date,
         time: formData.time,
         location: formData.location,
-        description: formData.description,
+        maxGuests: formData.maxGuests ? parseInt(formData.maxGuests) : undefined,
         type: formData.type,
-        maxGuests: parseInt(formData.maxGuests) || 0,
+        userId: user.id,
       }
 
-      console.log('Données envoyées:', eventData)
+      console.log('Creating event with data:', eventData)
 
-      const response = await fetch('/api/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData),
-      })
-
-      const responseData = await response.json()
-      console.log('Réponse complète du serveur:', responseData)
-
-      if (!response.ok) {
-        throw new Error(
-          responseData.details || 
-          responseData.error || 
-          'Erreur lors de la création de l\'événement'
-        )
-      }
+      const event = await createEvent(eventData)
+      console.log('Event created:', event)
 
       setEventData({
-        id: responseData.id,
-        title: responseData.name,
-        date: responseData.date,
-        location: responseData.location,
-        description: responseData.description,
-        code: responseData.code,
+        id: event.id,
+        title: event.name,
+        date: formatDate(event.date),
+        location: event.location,
+        description: event.description,
+        code: event.code,
       })
-      toast.success('Événement créé avec succès !')
-      setShowSummary(true)
 
-      // Redirection immédiate vers la page des événements
-      router.push('/mes-evenements?refresh=true')
+      setShowSummary(true)
     } catch (error) {
-      console.error('Erreur détaillée:', error)
-      toast.error(
-        error instanceof Error 
-          ? error.message 
-          : 'Une erreur est survenue lors de la création de l\'événement'
-      )
+      console.error('Error creating event:', error)
+      toast.error('Erreur lors de la création de l\'événement')
     } finally {
       setIsLoading(false)
     }
@@ -240,7 +224,11 @@ export default function CreerEvenementPage() {
       {eventData && (
         <EventSummaryDialog
           isOpen={showSummary}
-          onClose={() => setShowSummary(false)}
+          onClose={() => {
+            setShowSummary(false)
+            // Rediriger après la fermeture du dialogue
+            router.push('/mes-evenements?refresh=true')
+          }}
           eventData={eventData}
         />
       )}

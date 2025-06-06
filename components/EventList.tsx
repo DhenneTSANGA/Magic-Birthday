@@ -53,9 +53,7 @@ export function EventList() {
   // Mémoisation du filtrage des événements
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
-      const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.location.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesSearch = event.code.toLowerCase().includes(searchQuery.toLowerCase())
       
       const matchesStatus = statusFilter === 'all' || event.status.toLowerCase() === statusFilter
       const matchesType = typeFilter === 'all' || event.type.toLowerCase() === typeFilter
@@ -112,7 +110,7 @@ export function EventList() {
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher un événement..."
+            placeholder="Rechercher par code d'événement..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)

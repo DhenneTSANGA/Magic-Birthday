@@ -72,6 +72,7 @@ export interface Event {
         firstName: string;
         lastName: string;
         avatar: string | null;
+        email: string;
     };
     createdAt: Date;
     updatedAt: Date;
@@ -100,28 +101,54 @@ export type UpdateEventData = Partial<CreateEventData> & {
  */
 async function ensureUserExists(userId: string) {
   try {
-    // Vérifier si l'utilisateur existe déjà
-    let user = await prisma.user.findUnique({
+    // Récupérer les informations de l'utilisateur depuis Supabase
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    console.log('Supabase user data:', user);
+    console.log('Supabase user error:', userError);
+    
+    if (userError) {
+      console.error('Erreur lors de la récupération des données utilisateur:', userError);
+      throw new Error('Impossible de récupérer les données utilisateur');
+    }
+
+    if (!user) {
+      throw new Error('Utilisateur non trouvé');
+    }
+
+    // Vérifier si l'utilisateur existe déjà dans Prisma
+    let prismaUser = await prisma.user.findUnique({
       where: { id: userId }
     });
 
-    if (!user) {
-      // Créer l'utilisateur dans Prisma avec des valeurs par défaut
-      // Les informations détaillées seront mises à jour plus tard
-      user = await prisma.user.create({
+    console.log('Existing Prisma user:', prismaUser);
+
+    if (!prismaUser) {
+      // Créer l'utilisateur dans Prisma avec les données de Supabase
+      prismaUser = await prisma.user.create({
         data: {
           id: userId,
-          email: `${userId}@temp.com`, // Email temporaire
-          firstName: 'Utilisateur',
-          lastName: 'Anonyme',
+          email: user.email || `${userId}@temp.com`,
+          firstName: user.user_metadata?.firstName || user.email?.split('@')[0] || 'Utilisateur',
+          lastName: user.user_metadata?.lastName || 'Anonyme',
           password: '', // Le mot de passe est géré par Supabase
         }
       });
-
-      console.log('Utilisateur créé dans Prisma:', user);
+      console.log('Created new Prisma user:', prismaUser);
+    } else {
+      // Mettre à jour l'utilisateur avec les dernières données de Supabase
+      prismaUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          email: user.email || prismaUser.email,
+          firstName: user.user_metadata?.firstName || prismaUser.firstName,
+          lastName: user.user_metadata?.lastName || prismaUser.lastName,
+        }
+      });
+      console.log('Updated Prisma user:', prismaUser);
     }
 
-    return user;
+    return prismaUser;
   } catch (error) {
     console.error('Erreur lors de la vérification/création de l\'utilisateur:', error);
     throw new Error('Impossible de vérifier/créer l\'utilisateur');
@@ -139,7 +166,8 @@ export async function createEvent(data: CreateEventData): Promise<Event> {
         console.log('Données reçues dans createEvent:', data)
 
         // S'assurer que l'utilisateur existe
-        await ensureUserExists(data.userId);
+        const user = await ensureUserExists(data.userId);
+        console.log('User data after ensureUserExists:', user);
 
         // S'assurer que la date est un objet Date
         const eventDate = data.date instanceof Date ? data.date : new Date(data.date)
@@ -164,6 +192,7 @@ export async function createEvent(data: CreateEventData): Promise<Event> {
                         firstName: true,
                         lastName: true,
                         avatar: true,
+                        email: true,
                     },
                 },
             },
@@ -184,7 +213,13 @@ export async function createEvent(data: CreateEventData): Promise<Event> {
             status: event.status,
             maxGuests: event.maxGuests,
             userId: event.userId,
-            createdBy: event.createdBy,
+            createdBy: {
+                id: event.createdBy.id,
+                firstName: event.createdBy.firstName,
+                lastName: event.createdBy.lastName,
+                avatar: event.createdBy.avatar,
+                email: event.createdBy.email,
+            },
             createdAt: event.createdAt,
             updatedAt: event.updatedAt,
         }
@@ -215,6 +250,7 @@ export async function getEventByCode(code: string) {
             firstName: true,
             lastName: true,
             avatar: true,
+            email: true,
           },
         },
         invites: {
@@ -225,6 +261,7 @@ export async function getEventByCode(code: string) {
                 firstName: true,
                 lastName: true,
                 avatar: true,
+                email: true,
               },
             },
           },
@@ -238,6 +275,7 @@ export async function getEventByCode(code: string) {
                 firstName: true,
                 lastName: true,
                 avatar: true,
+                email: true,
               },
             },
           },
@@ -251,6 +289,9 @@ export async function getEventByCode(code: string) {
     if (!event) {
       throw new Error('Événement non trouvé')
     }
+
+    console.log('Event data in getEventByCode:', event);
+    console.log('Creator data in getEventByCode:', event.createdBy);
 
     return event
   } catch (error) {
@@ -274,6 +315,7 @@ export async function getUserEvents(userId: string): Promise<Event[]> {
             firstName: true,
             lastName: true,
             avatar: true,
+            email: true,
           },
         },
         invites: {
@@ -284,6 +326,7 @@ export async function getUserEvents(userId: string): Promise<Event[]> {
                 firstName: true,
                 lastName: true,
                 avatar: true,
+                email: true,
               },
             },
           },
@@ -320,6 +363,7 @@ export async function updateEvent(code: string, data: UpdateEventData): Promise<
             firstName: true,
             lastName: true,
             avatar: true,
+            email: true,
           },
         },
       },

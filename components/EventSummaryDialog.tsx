@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Check, Copy, Share2 } from "lucide-react";
+import { Check, Copy, Share2, X } from "lucide-react";
 
 interface EventSummaryDialogProps {
     isOpen: boolean;
@@ -72,17 +72,25 @@ export function EventSummaryDialog({ isOpen, onClose, eventData }: EventSummaryD
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
+        <Dialog 
+            open={isOpen} 
+            onOpenChange={() => {}} 
+            modal={true}
+        >
+            <DialogContent 
+                className="sm:max-w-[350px]"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
-                    <DialogTitle className="text-center text-2xl font-bold text-primary">
+                    <DialogTitle className="text-center text-xl font-bold text-primary">
                         Événement créé avec succès !
                     </DialogTitle>
                 </DialogHeader>
-                <div className="mt-4 space-y-4">
-                    <div className="rounded-lg border bg-card p-4">
-                        <h3 className="font-semibold text-lg mb-2">{eventData.title}</h3>
-                        <div className="space-y-2 text-sm text-muted-foreground">
+                <div className="mt-3 space-y-3">
+                    <div className="rounded-lg border bg-card p-3">
+                        <h3 className="font-semibold text-base mb-1">{eventData.title}</h3>
+                        <div className="space-y-1 text-sm text-muted-foreground">
                             <p>📅 {new Date(eventData.date).toLocaleDateString('fr-FR', {
                                 weekday: 'long',
                                 year: 'numeric',
@@ -91,54 +99,54 @@ export function EventSummaryDialog({ isOpen, onClose, eventData }: EventSummaryD
                             })}</p>
                             <p>📍 {eventData.location}</p>
                             {eventData.description && (
-                                <p className="mt-2">{eventData.description}</p>
+                                <p className="mt-1 text-sm">{eventData.description}</p>
                             )}
                         </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                         <label className="text-sm font-medium">Code de l'événement</label>
                         <div className="flex gap-2">
                             <Input
                                 value={eventData.code}
                                 readOnly
-                                className="font-mono text-center"
+                                className="font-mono text-center h-8 text-sm"
                             />
                             <Button
                                 variant="outline"
                                 size="icon"
                                 onClick={handleCopyCode}
-                                className="shrink-0"
+                                className="shrink-0 h-8 w-8"
                             >
-                                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                             </Button>
                         </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                         <label className="text-sm font-medium">Lien de partage</label>
                         <div className="flex gap-2">
                             <Input
                                 value={shareUrl}
                                 readOnly
-                                className="text-sm"
+                                className="text-xs h-8"
                             />
                             <Button
                                 variant="outline"
                                 size="icon"
                                 onClick={handleCopyLink}
-                                className="shrink-0"
+                                className="shrink-0 h-8 w-8"
                             >
-                                <Copy className="h-4 w-4" />
+                                <Copy className="h-3 w-3" />
                             </Button>
                         </div>
                     </div>
 
                     <Button
-                        className="w-full"
+                        className="w-full h-8 text-sm"
                         onClick={handleShare}
                     >
-                        <Share2 className="mr-2 h-4 w-4" />
+                        <Share2 className="mr-2 h-3 w-3" />
                         Partager l'événement
                     </Button>
 
@@ -146,6 +154,16 @@ export function EventSummaryDialog({ isOpen, onClose, eventData }: EventSummaryD
                         Partagez ce code ou ce lien avec vos invités pour qu'ils puissent accéder à l'événement.
                     </p>
                 </div>
+                <DialogFooter className="mt-4">
+                    <Button 
+                        variant="outline" 
+                        onClick={onClose}
+                        className="w-full h-8 text-sm"
+                    >
+                        <X className="mr-2 h-3 w-3" />
+                        Fermer
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
