@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Metadata } from 'next'
 
 interface EventPageProps {
   params: {
@@ -14,13 +15,30 @@ interface EventPageProps {
   }
 }
 
-export default async function EventPage({ params }: EventPageProps) {
-  console.log('EventPage - Paramètres reçus:', params);
-  
+// Génération des métadonnées dynamiques
+export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
   try {
-    console.log('EventPage - Tentative de récupération de l\'événement avec le code:', params.code);
     const event = await getEventByCode(params.code)
-    console.log('EventPage - Événement récupéré:', { id: event.id, code: event.code, name: event.name });
+    return {
+      title: `${event.name} | Magic Birthday`,
+      description: event.description || `Découvrez l'événement ${event.name} sur Magic Birthday`,
+      openGraph: {
+        title: event.name,
+        description: event.description,
+        type: 'website',
+      },
+    }
+  } catch (error) {
+    return {
+      title: 'Événement non trouvé | Magic Birthday',
+      description: 'L\'événement que vous recherchez n\'existe pas ou a été supprimé.',
+    }
+  }
+}
+
+export default async function EventPage({ params }: EventPageProps) {
+  try {
+    const event = await getEventByCode(params.code)
 
     return (
       <div className="container mx-auto px-4 py-8">
@@ -204,27 +222,27 @@ export default async function EventPage({ params }: EventPageProps) {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium">
+                          <p className="font-medium">
                             {invite.user.firstName} {invite.user.lastName}
                           </p>
-                          <Badge
-                            variant={
-                              invite.status === 'ACCEPTED'
-                                ? 'default'
-                                : invite.status === 'DECLINED'
-                                ? 'destructive'
-                                : 'secondary'
-                            }
-                            className="mt-1"
-                          >
-                            {invite.status === 'ACCEPTED'
-                              ? 'Accepté'
-                              : invite.status === 'DECLINED'
-                              ? 'Refusé'
-                              : 'En attente'}
-                          </Badge>
+                          <p className="text-sm text-gray-500">{invite.user.email}</p>
                         </div>
                       </div>
+                      <Badge
+                        variant={
+                          invite.status === 'ACCEPTED'
+                            ? 'default'
+                            : invite.status === 'DECLINED'
+                            ? 'destructive'
+                            : 'secondary'
+                        }
+                      >
+                        {invite.status === 'ACCEPTED'
+                          ? 'Accepté'
+                          : invite.status === 'DECLINED'
+                          ? 'Refusé'
+                          : 'En attente'}
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -250,7 +268,6 @@ export default async function EventPage({ params }: EventPageProps) {
       </div>
     )
   } catch (error) {
-    console.error('Erreur lors du chargement de l\'événement:', error)
     notFound()
   }
 } 
