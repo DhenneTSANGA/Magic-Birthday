@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useEvents } from '@/hooks/useEvents'
 import { Event } from '@/utils/event'
 import { formatDate } from '@/utils/event'
@@ -30,54 +30,53 @@ import { useRouter, useSearchParams } from 'next/navigation'
 type EventStatus = 'all' | 'draft' | 'published' | 'cancelled'
 type EventType = 'all' | 'public' | 'private'
 
+const ITEMS_PER_PAGE = 9
+
 export function EventList() {
   const { loading, events, fetchEvents, error } = useEvents()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<EventStatus>('all')
   const [typeFilter, setTypeFilter] = useState<EventType>('all')
+  const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    console.log('EventList - useEffect - État initial:', { loading, eventsCount: events.length, error })
-    
-    // Recharger les événements si on arrive avec le paramètre refresh
     if (searchParams.get('refresh') === 'true') {
-      console.log('EventList - Rechargement forcé des événements')
-      fetchEvents()
-      // Nettoyer l'URL
+      fetchEvents(true)
       router.replace('/mes-evenements', { scroll: false })
     } else {
-      console.log('EventList - Chargement initial des événements')
       fetchEvents()
     }
   }, [fetchEvents, searchParams, router])
 
-  useEffect(() => {
-    console.log('EventList - Mise à jour des événements:', { 
-      loading, 
-      eventsCount: events.length, 
-      error,
-      filteredCount: filteredEvents.length 
+  // Mémoisation du filtrage des événements
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.location.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      const matchesStatus = statusFilter === 'all' || event.status.toLowerCase() === statusFilter
+      const matchesType = typeFilter === 'all' || event.type.toLowerCase() === typeFilter
+
+      return matchesSearch && matchesStatus && matchesType
     })
-  }, [loading, events, error])
+  }, [events, searchQuery, statusFilter, typeFilter])
 
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesStatus = statusFilter === 'all' || event.status.toLowerCase() === statusFilter
-    const matchesType = typeFilter === 'all' || event.type.toLowerCase() === typeFilter
-
-    return matchesSearch && matchesStatus && matchesType
-  })
+  // Pagination
+  const totalPages = Math.ceil(filteredEvents.length / ITEMS_PER_PAGE)
+  const paginatedEvents = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    const end = start + ITEMS_PER_PAGE
+    return filteredEvents.slice(start, end)
+  }, [filteredEvents, currentPage])
 
   if (error) {
     return (
       <div className="text-center py-8">
         <p className="text-destructive">Erreur: {error}</p>
-        <Button onClick={() => fetchEvents()} className="mt-4">
+        <Button onClick={() => fetchEvents(true)} className="mt-4">
           Réessayer
         </Button>
       </div>
@@ -85,7 +84,6 @@ export function EventList() {
   }
 
   if (loading && events.length === 0) {
-    console.log('EventList - Affichage du chargement (aucun événement)')
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[...Array(6)].map((_, i) => (
@@ -107,12 +105,6 @@ export function EventList() {
     )
   }
 
-  console.log('EventList - Rendu final:', { 
-    eventsCount: events.length, 
-    filteredCount: filteredEvents.length,
-    loading 
-  })
-
   return (
     <div className="space-y-4">
       {/* Filtres */}
@@ -122,11 +114,20 @@ export function EventList() {
           <Input
             placeholder="Rechercher un événement..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setCurrentPage(1) // Réinitialiser la page lors de la recherche
+            }}
             className="pl-8"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(value: EventStatus) => setStatusFilter(value)}>
+        <Select 
+          value={statusFilter} 
+          onValueChange={(value: EventStatus) => {
+            setStatusFilter(value)
+            setCurrentPage(1)
+          }}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
@@ -137,7 +138,13 @@ export function EventList() {
             <SelectItem value="cancelled">Annulé</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={typeFilter} onValueChange={(value: EventType) => setTypeFilter(value)}>
+        <Select 
+          value={typeFilter} 
+          onValueChange={(value: EventType) => {
+            setTypeFilter(value)
+            setCurrentPage(1)
+          }}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
@@ -164,19 +171,42 @@ export function EventList() {
           )}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredEvents.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {paginatedEvents.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Précédent
+              </Button>
+              <span className="py-2 px-4">
+                Page {currentPage} sur {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Suivant
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
 }
 
 function EventCard({ event }: { event: Event }) {
-  console.log('EventCard - Événement:', { id: event.id, code: event.code, name: event.name });
-  
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -204,34 +234,28 @@ function EventCard({ event }: { event: Event }) {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 space-y-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span>{formatDate(event.date)}</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span>{event.time}</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <MapPin className="h-4 w-4" />
-          <span className="line-clamp-1">{event.location}</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Users className="h-4 w-4" />
-          <span>
-            {event._count?.invites || 0} / {event.maxGuests || '∞'} invités
-          </span>
+      <CardContent className="flex-1">
+        <div className="space-y-2">
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Calendar className="mr-2 h-4 w-4" />
+            {formatDate(event.date)}
+          </div>
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Clock className="mr-2 h-4 w-4" />
+            {event.time}
+          </div>
+          <div className="flex items-center text-sm text-muted-foreground">
+            <MapPin className="mr-2 h-4 w-4" />
+            {event.location}
+          </div>
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Users className="mr-2 h-4 w-4" />
+            {event.maxGuests > 0 ? `${event.maxGuests} invités max` : 'Invités illimités'}
+          </div>
         </div>
       </CardContent>
       <CardFooter>
-        <Button 
-          asChild 
-          className="w-full"
-          onClick={() => {
-            console.log('EventCard - Clic sur le bouton de détails:', { code: event.code });
-          }}
-        >
+        <Button asChild className="w-full">
           <Link href={`/evenement/${event.code}`}>
             Voir les détails
           </Link>

@@ -1,6 +1,11 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Event, CreateEventData, UpdateEventData } from '@/utils/event'
+
+// Cache pour stocker les événements
+let eventsCache: Event[] | null = null
+let lastFetchTime = 0
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 export function useEvents() {
   const [loading, setLoading] = useState(true)
@@ -8,42 +13,44 @@ export function useEvents() {
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Récupérer tous les événements
-  const fetchEvents = async () => {
+  // Récupérer tous les événements avec mise en cache
+  const fetchEvents = useCallback(async (forceRefresh = false) => {
     try {
-      console.log('useEvents - Début de la récupération des événements')
+      // Utiliser le cache si disponible et pas expiré
+      const now = Date.now()
+      if (!forceRefresh && eventsCache && (now - lastFetchTime) < CACHE_DURATION) {
+        setEvents(eventsCache)
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
       setError(null)
       
       const response = await fetch('/api/events')
-      console.log('useEvents - Réponse du serveur:', response.status)
-      
       const data = await response.json()
-      console.log('useEvents - Données reçues:', data)
       
       if (!response.ok) {
-        console.error('useEvents - Erreur serveur:', data)
         throw new Error(data.error || 'Erreur lors de la récupération des événements')
       }
       
       if (!Array.isArray(data)) {
-        console.error('useEvents - Données invalides:', data)
         throw new Error('Format de données invalide')
       }
 
+      // Mettre à jour le cache
+      eventsCache = data
+      lastFetchTime = now
       setEvents(data)
-      console.log('useEvents - Événements mis à jour:', data.length)
     } catch (error) {
-      console.error('useEvents - Erreur détaillée:', error)
       const message = error instanceof Error ? error.message : 'Impossible de récupérer les événements'
       setError(message)
       toast.error(message)
       setEvents([])
     } finally {
       setLoading(false)
-      console.log('useEvents - État final:', { loading: false, eventsCount: events.length, error: null })
     }
-  }
+  }, [])
 
   // Récupérer un événement spécifique
   const fetchEvent = async (code: string) => {
