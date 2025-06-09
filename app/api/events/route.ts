@@ -149,6 +149,16 @@ export async function POST(request: NextRequest) {
           password: '',
         }
       })
+    } else {
+      // Mettre à jour les informations de l'utilisateur si elles ont changé
+      prismaUser = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email: user.email || prismaUser.email,
+          firstName: user.user_metadata?.firstName || prismaUser.firstName,
+          lastName: user.user_metadata?.lastName || prismaUser.lastName,
+        }
+      })
     }
 
     // Générer un code unique pour l'événement
@@ -167,6 +177,11 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         code,
         status: 'DRAFT',
+        createdBy: {
+          connect: {
+            id: prismaUser.id
+          }
+        }
       },
       include: {
         createdBy: {
@@ -181,6 +196,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log('Event créé avec créateur:', event.createdBy)
     return NextResponse.json(event)
   } catch (error) {
     console.error('Error creating event:', error)

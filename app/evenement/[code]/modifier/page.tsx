@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { ArrowLeft, Calendar, Clock, MapPin, PartyPopper } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,22 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { EventSummaryDialog } from "@/components/EventSummaryDialog"
-import { generateEventCode, formatDate } from "@/utils/event"
 import { supabase } from "@/lib/supabase"
 
-export default function CreerEvenementPage() {
+export default function ModifierEvenementPage({ params }: { params: { code: string } }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [showSummary, setShowSummary] = useState(false)
-  const [eventData, setEventData] = useState<{
-    id: string;
-    title: string;
-    date: string;
-    location: string;
-    description?: string;
-    code: string;
-  } | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -36,82 +25,108 @@ export default function CreerEvenementPage() {
     type: "PUBLIC" as const,
   })
 
-  // Vérifier l'authentification au chargement de la page
+  // Charger les données de l'événement
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const response = await fetch(`/api/events/${params.code}`)
+        if (!response.ok) {
+          throw new Error('Événement non trouvé')
+        }
+        const event = await response.json()
+        
+        // Formater la date pour le formulaire
+        const date = new Date(event.date)
+        const formattedDate = date.toISOString().split('T')[0]
+        
+        setFormData({
+          name: event.name,
+          description: event.description || "",
+          date: formattedDate,
+          time: event.time,
+          location: event.location,
+          maxGuests: event.maxGuests.toString(),
+          type: event.type,
+        })
+      } catch (error) {
+        console.error('Error fetching event:', error)
+        toast.error('Erreur lors du chargement de l\'événement')
+        router.push('/mes-evenements')
+      }
+    }
+
+    fetchEvent()
+  }, [params.code, router])
+
+  // Vérifier l'authentification
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error || !user) {
-        toast.error('Veuillez vous connecter pour créer un événement')
-        router.push('/sign-in?callbackUrl=/creer-evenement')
+        toast.error('Veuillez vous connecter pour modifier un événement')
+        router.push('/sign-in?callbackUrl=/evenement/' + params.code + '/modifier')
       }
     }
     checkAuth()
-  }, [router])
+  }, [params.code, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      // Récupérer l'utilisateur actuel
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
-        throw new Error('Utilisateur non connecté')
-      }
+      // Formater la date
+      const formattedDate = new Date(formData.date + 'T' + formData.time).toISOString()
 
-      // Formater la date correctement
-      const formattedDate = new Date(formData.date + 'T' + formData.time)
-      console.log('Date avant envoi:', formattedDate)
-      console.log('Date ISO:', formattedDate.toISOString())
-      
-      const eventData = {
-        name: formData.name,
-        description: formData.description,
-        date: formattedDate.toISOString(), // Envoyer la date au format ISO
-        time: formData.time,
-        location: formData.location,
-        maxGuests: parseInt(formData.maxGuests) || 0,
-        type: formData.type,
-      }
-
-      // Appeler l'API pour créer l'événement
-      const response = await fetch('/api/events', {
-        method: 'POST',
+      const response = await fetch(`/api/events/${params.code}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(eventData),
+        body: JSON.stringify({
+          ...formData,
+          date: formattedDate,
+          maxGuests: parseInt(formData.maxGuests),
+        }),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la création de l\'événement')
+        throw new Error(error.error || 'Erreur lors de la mise à jour de l\'événement')
       }
 
-      const event = await response.json()
-      
-      console.log('Date reçue de l\'API:', event.date)
-      console.log('Event complet:', event)
-      
-      toast.success('Événement créé avec succès !')
-      
-      // Formater la date pour l'affichage en utilisant la date et l'heure d'origine
-      const displayDate = new Date(`${formData.date}T${formData.time}`)
-      console.log('Display date:', displayDate)
-      
-      setEventData({
-        id: event.id,
-        title: event.name,
-        date: formatDate(displayDate),
-        location: event.location,
-        description: event.description || undefined,
-        code: event.code,
+      toast.success('Événement mis à jour avec succès')
+      router.push(`/evenement/${params.code}`)
+    } catch (error) {
+      console.error('Error updating event:', error)
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la mise à jour de l\'événement')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const response = await fetch(`/api/events/${params.code}`, {
+        method: 'DELETE',
       })
 
-      setShowSummary(true)
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la suppression de l\'événement')
+      }
+
+      toast.success('Événement supprimé avec succès')
+      router.push('/mes-evenements')
     } catch (error) {
-      console.error('Error creating event:', error)
-      toast.error(error instanceof Error ? error.message : 'Erreur lors de la création de l\'événement')
+      console.error('Error deleting event:', error)
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la suppression de l\'événement')
     } finally {
       setIsLoading(false)
     }
@@ -127,16 +142,16 @@ export default function CreerEvenementPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        <Link href="/mes-evenements" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6">
+        <Link href={`/evenement/${params.code}`} className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Retour à mes événements
+          Retour à l'événement
         </Link>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Créer un événement</CardTitle>
+            <CardTitle className="text-2xl">Modifier l'événement</CardTitle>
             <CardDescription>
-              Partagez votre événement avec la communauté
+              Modifiez les détails de votre événement
             </CardDescription>
           </CardHeader>
 
@@ -246,26 +261,27 @@ export default function CreerEvenementPage() {
               </div>
             </CardContent>
 
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Création en cours..." : "Créer l'événement"}
+            <CardFooter className="flex flex-col sm:flex-row gap-4">
+              <Button
+                type="submit"
+                className="w-full sm:w-auto"
+                disabled={isLoading}
+              >
+                {isLoading ? "Mise à jour..." : "Mettre à jour l'événement"}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full sm:w-auto"
+                onClick={handleDelete}
+                disabled={isLoading}
+              >
+                {isLoading ? "Suppression..." : "Supprimer l'événement"}
               </Button>
             </CardFooter>
           </form>
         </Card>
       </div>
-
-      {eventData && (
-        <EventSummaryDialog
-          isOpen={showSummary}
-          onClose={() => {
-            setShowSummary(false)
-            // Rediriger après la fermeture du dialogue
-            router.push('/mes-evenements?refresh=true')
-          }}
-          eventData={eventData}
-        />
-      )}
     </div>
   )
-}
+} 

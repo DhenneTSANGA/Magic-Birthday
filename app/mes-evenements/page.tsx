@@ -1,36 +1,198 @@
-import { Metadata } from 'next'
-import { EventList } from '@/components/EventList'
-import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
-import Link from 'next/link'
-import { Suspense } from 'react'
+"use client"
 
-export const metadata: Metadata = {
-  title: 'Mes événements | Crée ton anniversaire',
-  description: 'Gérez vos événements et invitations',
-}
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Eye, Pencil, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { toast } from "sonner"
+import { formatDate } from "@/utils/event"
+import { supabase } from "@/lib/supabase"
+import { EventEditDialog } from "@/components/EventEditDialog"
 
 export default function MesEvenementsPage() {
-  return (
-    <div className="container py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Mes événements</h1>
-          <p className="text-muted-foreground mt-1">
-            Gérez vos événements et invitations
-          </p>
+  const router = useRouter()
+  const [events, setEvents] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+
+  const fetchEvents = async () => {
+    try {
+      console.log('Début de la récupération des événements...')
+      const response = await fetch('/api/events', {
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
+      console.log('Réponse de l\'API:', response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Erreur API:', errorData)
+        throw new Error(errorData.error || 'Erreur lors de la récupération des événements')
+      }
+
+      const data = await response.json()
+      console.log('Événements récupérés:', data)
+      setEvents(data)
+    } catch (error) {
+      console.error('Erreur détaillée:', error)
+      toast.error('Erreur lors de la récupération des événements')
+      setEvents([]) // Réinitialiser les événements en cas d'erreur
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const checkAuthAndFetchEvents = async () => {
+      try {
+        console.log('Vérification de l\'authentification...')
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        
+        if (authError) {
+          console.error('Erreur d\'authentification:', authError)
+          throw authError
+        }
+
+        if (!user) {
+          console.log('Utilisateur non connecté')
+          toast.error('Veuillez vous connecter pour voir vos événements')
+          router.push('/sign-in?callbackUrl=/mes-evenements')
+          return
+        }
+
+        console.log('Utilisateur authentifié:', user.id)
+        await fetchEvents()
+      } catch (error) {
+        console.error('Erreur lors de la vérification de l\'authentification:', error)
+        toast.error('Erreur d\'authentification')
+        setIsLoading(false)
+      }
+    }
+
+    checkAuthAndFetchEvents()
+  }, [router])
+
+  const handleEdit = (event) => {
+    setSelectedEvent(event)
+    setShowEditDialog(true)
+  }
+
+  const handleDelete = async (code: string) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/events/${code}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la suppression de l\'événement')
+      }
+
+      toast.success('Événement supprimé avec succès')
+      fetchEvents() // Rafraîchir la liste
+    } catch (error) {
+      console.error('Error deleting event:', error)
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la suppression de l\'événement')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-3">Chargement de vos événements...</span>
         </div>
-        <Button asChild>
-          <Link href="/creer-evenement">
-            <Plus className="mr-2 h-4 w-4" />
-            Créer un événement
-          </Link>
-        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Mes événements</h1>
+        <Link href="/creer-evenement">
+          <Button>Créer un événement</Button>
+        </Link>
       </div>
 
-      <Suspense fallback={<div>Chargement des événements...</div>}>
-        <EventList />
-      </Suspense>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {events.map((event) => (
+          <Card key={event.code}>
+            <CardHeader>
+              <CardTitle>{event.name}</CardTitle>
+              <CardDescription>
+                {formatDate(event.date)} à {event.time}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-2">
+                <span className="font-medium">Lieu :</span> {event.location}
+              </p>
+              <p className="text-sm mb-2">
+                <span className="font-medium">Créé par :</span>{' '}
+                {event.createdBy.firstName} {event.createdBy.lastName}
+              </p>
+              <p className="text-sm">{event.description}</p>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/evenement/${event.code}`)}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                Voir
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleEdit(event)}
+              >
+                <Pencil className="h-4 w-4 mr-1" />
+                Modifier
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDelete(event.code)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Supprimer
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+
+      {selectedEvent && (
+        <EventEditDialog
+          isOpen={showEditDialog}
+          onClose={() => {
+            setShowEditDialog(false)
+            setSelectedEvent(null)
+          }}
+          eventData={selectedEvent}
+          onEventUpdated={fetchEvents}
+        />
+      )}
+
+      {events.length === 0 && !isLoading && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Vous n'avez pas encore créé d'événement.</p>
+          <Link href="/creer-evenement" className="mt-4 inline-block">
+            <Button>Créer mon premier événement</Button>
+          </Link>
+        </div>
+      )}
     </div>
   )
 } 
