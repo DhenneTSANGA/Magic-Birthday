@@ -7,11 +7,18 @@ const protectedRoutes = ["/mon-compte", "/creer-evenement", "/mes-evenements"];
 // Routes d'authentification
 const authRoutes = ["/sign-in", "/sign-up"];
 
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 export async function middleware(request: NextRequest) {
     try {
         const { pathname } = request.nextUrl;
-        console.log('Middleware - Début du traitement pour:', pathname);
         
+        if (isDevelopment) {
+            console.log('-------- Middleware Debug --------');
+            console.log('Current path:', pathname);
+            console.log('Cookies:', Array.from(request.cookies.getAll()).map(c => c.name));
+        }
+
         // Créer une réponse
         let response = NextResponse.next({
             request: {
@@ -26,23 +33,36 @@ export async function middleware(request: NextRequest) {
             {
                 cookies: {
                     get(name: string) {
-                        console.log('Middleware - Lecture cookie:', name);
-                        return request.cookies.get(name)?.value;
+                        const cookie = request.cookies.get(name);
+                        if (isDevelopment) {
+                            console.log('Reading cookie:', name, cookie ? 'found' : 'not found');
+                        }
+                        return cookie?.value;
                     },
                     set(name: string, value: string, options: CookieOptions) {
-                        console.log('Middleware - Écriture cookie:', name);
+                        if (isDevelopment) {
+                            console.log('Setting cookie:', name);
+                        }
                         response.cookies.set({
                             name,
                             value,
                             ...options,
+                            path: '/',
+                            secure: process.env.NODE_ENV === 'production',
+                            sameSite: 'lax',
+                            httpOnly: true
                         });
                     },
                     remove(name: string, options: CookieOptions) {
-                        console.log('Middleware - Suppression cookie:', name);
+                        if (isDevelopment) {
+                            console.log('Removing cookie:', name);
+                        }
                         response.cookies.set({
                             name,
                             value: '',
                             ...options,
+                            path: '/',
+                            maxAge: 0
                         });
                     },
                 },
@@ -52,24 +72,26 @@ export async function middleware(request: NextRequest) {
         // Vérifier l'authentification avec getUser()
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (userError) {
-            console.error('Middleware - Erreur lors de la vérification de l\'utilisateur:', userError);
+        if (isDevelopment) {
+            console.log('Auth check result:');
+            console.log('- User:', user ? 'found' : 'not found');
+            console.log('- User ID:', user?.id);
+            console.log('- Error:', userError ? userError.message : 'none');
+            if (user) {
+                console.log('- Email:', user.email);
+                console.log('- Last sign in:', user.last_sign_in_at);
+            }
         }
-        
-        // Logs détaillés pour le débogage
-        console.log('Middleware - Route:', pathname);
-        console.log('Middleware - Utilisateur présent:', !!user);
-        if (user) {
-            console.log('Middleware - User ID:', user.id);
-            // Log des cookies présents
-            console.log('Middleware - Cookies présents:', Array.from(request.cookies.getAll()).map(c => c.name));
-        }
-        
+
         const isAuthenticated = !!user;
 
         // Rediriger vers la connexion si l'utilisateur n'est pas authentifié
         if (protectedRoutes.some(route => pathname.startsWith(route)) && !isAuthenticated) {
-            console.log('Middleware - Redirection vers /sign-in car non authentifié');
+            if (isDevelopment) {
+                console.log('Redirecting to sign-in because:');
+                console.log('- Is protected route:', protectedRoutes.some(route => pathname.startsWith(route)));
+                console.log('- Is not authenticated:', !isAuthenticated);
+            }
             const url = new URL("/sign-in", request.url);
             url.searchParams.set("callbackUrl", pathname);
             return NextResponse.redirect(url);
@@ -77,16 +99,26 @@ export async function middleware(request: NextRequest) {
 
         // Rediriger vers la page d'accueil si l'utilisateur est authentifié et essaie d'accéder aux routes d'auth
         if (authRoutes.some(route => pathname.startsWith(route)) && isAuthenticated) {
-            console.log('Middleware - Redirection vers / car déjà authentifié');
+            if (isDevelopment) {
+                console.log('Redirecting to home because user is already authenticated');
+            }
             return NextResponse.redirect(new URL("/", request.url));
+        }
+
+        if (isDevelopment) {
+            console.log('Proceeding with request');
+            console.log('--------------------------------');
         }
 
         // Retourner la réponse avec les cookies de session
         return response;
     } catch (error) {
-        console.error('Middleware - Erreur inattendue:', error);
-        // En cas d'erreur, on laisse passer la requête
-        return NextResponse.next();
+        if (isDevelopment) {
+            console.error('Middleware error:', error);
+        }
+        // En cas d'erreur, rediriger vers la page de connexion
+        const url = new URL("/sign-in", request.url);
+        return NextResponse.redirect(url);
     }
 }
 

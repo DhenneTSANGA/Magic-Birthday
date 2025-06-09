@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Calendar, Clock, MapPin, PartyPopper } from "lucide-react"
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { EventSummaryDialog } from "@/components/EventSummaryDialog"
-import { generateEventCode, createEvent } from "@/utils/event"
+import { generateEventCode, formatDate } from "@/utils/event"
 import { supabase } from "@/lib/supabase"
 
 export default function CreerEvenementPage() {
@@ -36,6 +36,18 @@ export default function CreerEvenementPage() {
     type: "PUBLIC" as const,
   })
 
+  // Vérifier l'authentification au chargement de la page
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) {
+        toast.error('Veuillez vous connecter pour créer un événement')
+        router.push('/sign-in?callbackUrl=/creer-evenement')
+      }
+    }
+    checkAuth()
+  }, [router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -47,37 +59,50 @@ export default function CreerEvenementPage() {
         throw new Error('Utilisateur non connecté')
       }
 
-      console.log('User data:', user)
-
+      // Formater la date correctement
+      const formattedDate = new Date(formData.date + 'T' + formData.time)
+      
       const eventData = {
         name: formData.name,
         description: formData.description,
-        date: formData.date,
+        date: formattedDate,
         time: formData.time,
         location: formData.location,
-        maxGuests: formData.maxGuests ? parseInt(formData.maxGuests) : undefined,
+        maxGuests: parseInt(formData.maxGuests) || 0,
         type: formData.type,
-        userId: user.id,
       }
 
-      console.log('Creating event with data:', eventData)
+      // Appeler l'API pour créer l'événement
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      })
 
-      const event = await createEvent(eventData)
-      console.log('Event created:', event)
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la création de l\'événement')
+      }
 
+      const event = await response.json()
+      
+      toast.success('Événement créé avec succès !')
+      
       setEventData({
         id: event.id,
         title: event.name,
         date: formatDate(event.date),
         location: event.location,
-        description: event.description,
+        description: event.description || undefined,
         code: event.code,
       })
 
       setShowSummary(true)
     } catch (error) {
       console.error('Error creating event:', error)
-      toast.error('Erreur lors de la création de l\'événement')
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la création de l\'événement')
     } finally {
       setIsLoading(false)
     }
