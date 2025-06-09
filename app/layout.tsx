@@ -8,6 +8,7 @@ import { PartyPopper, Calendar, Gift, MessageCircle } from "lucide-react"
 import { ThemeSelector } from "@/components/theme-selector"
 import { UserButton } from "@/components/UserButton"
 import Image from "next/image"
+import { NotificationButton } from "@/components/NotificationButton"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -60,6 +61,7 @@ export default function RootLayout({
               </nav>
               <div className="flex items-center gap-4">
                 <ThemeSelector />
+                <NotificationButton />
                 <UserButton />
               </div>
             </div>
