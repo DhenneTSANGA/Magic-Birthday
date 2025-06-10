@@ -8,12 +8,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuFooter,
 } from "@/components/ui/dropdown-menu"
 import { useNotifications } from "@/hooks/useNotifications"
 import { useAuth } from "@/hooks/useAuth"
 import { formatDistanceToNow } from "date-fns"
 import { fr } from "date-fns/locale"
 import { toast } from "sonner"
+import Link from "next/link"
 
 export function NotificationButton() {
   const { user } = useAuth()
@@ -120,22 +122,13 @@ export function NotificationButton() {
             Aucune notification
           </div>
         ) : (
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="max-h-[300px] overflow-y-auto">
             {notifications.map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
-                className={`relative flex cursor-pointer flex-col items-start gap-1 p-4 ${
-                  !notification.read ? "bg-muted/50" : ""
-                }`}
+                className="relative flex flex-col items-start gap-1 p-4"
               >
-                <div className="text-sm font-medium">{notification.message}</div>
-                <div className="text-xs text-muted-foreground">
-                  {notification.type === "invitation"
-                    ? "Invitation à un événement"
-                    : notification.type === "comment"
-                    ? "Nouveau commentaire"
-                    : "Mise à jour d'événement"}
-                </div>
+                <div className="text-sm">{notification.message}</div>
                 <div className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(notification.createdAt), {
                     addSuffix: true,
@@ -172,6 +165,14 @@ export function NotificationButton() {
             ))}
           </div>
         )}
+        <DropdownMenuSeparator />
+        <div className="p-2">
+          <Link href="/notifications" className="block w-full">
+            <Button variant="secondary" className="w-full">
+              Voir toutes les notifications
+            </Button>
+          </Link>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   )
