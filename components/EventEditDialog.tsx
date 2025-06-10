@@ -62,16 +62,13 @@ export function EventEditDialog({
     setIsLoading(true)
 
     try {
-      // Formater la date
       const formattedDate = new Date(formData.date + 'T' + formData.time).toISOString()
-      console.log('Date formatée:', formattedDate)
 
       const updateData = {
         ...formData,
         date: formattedDate,
         maxGuests: parseInt(formData.maxGuests),
       }
-      console.log('Données à envoyer:', updateData)
 
       const response = await fetch(`/api/events/${eventData.code}`, {
         method: 'PATCH',
@@ -81,19 +78,16 @@ export function EventEditDialog({
         body: JSON.stringify(updateData),
       })
 
-      console.log('Statut de la réponse:', response.status)
-      const responseData = await response.json()
-      console.log('Réponse de l\'API:', responseData)
-
       if (!response.ok) {
-        throw new Error(responseData.error || 'Erreur lors de la mise à jour de l\'événement')
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la mise à jour de l\'événement')
       }
 
       toast.success('Événement mis à jour avec succès')
       onEventUpdated()
       onClose()
     } catch (error) {
-      console.error('Erreur détaillée:', error)
+      console.error('Erreur:', error)
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la mise à jour de l\'événement')
     } finally {
       setIsLoading(false)
@@ -109,7 +103,7 @@ export function EventEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Modifier l'événement</DialogTitle>
           <DialogDescription>
@@ -117,17 +111,34 @@ export function EventEditDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Titre de l'événement</Label>
-            <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Ex: Anniversaire surprise de Marie"
-              required
-            />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Titre</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Ex: Anniversaire surprise de Marie"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="type">Type</Label>
+              <select
+                id="type"
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                required
+              >
+                <option value="PUBLIC">Public</option>
+                <option value="PRIVATE">Privé</option>
+              </select>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -138,14 +149,15 @@ export function EventEditDialog({
               value={formData.description}
               onChange={handleChange}
               placeholder="Décrivez votre événement..."
+              className="h-20 resize-none"
               required
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">
-                <Calendar className="inline-block mr-2 h-4 w-4" />
+              <Label htmlFor="date" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
                 Date
               </Label>
               <Input
@@ -159,8 +171,8 @@ export function EventEditDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="time">
-                <Clock className="inline-block mr-2 h-4 w-4" />
+              <Label htmlFor="time" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
                 Heure
               </Label>
               <Input
@@ -174,54 +186,41 @@ export function EventEditDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">
-              <MapPin className="inline-block mr-2 h-4 w-4" />
-              Lieu
-            </Label>
-            <Input
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              placeholder="Adresse de l'événement"
-              required
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="location" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Lieu
+              </Label>
+              <Input
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                placeholder="Adresse de l'événement"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="maxGuests" className="flex items-center gap-2">
+                <PartyPopper className="h-4 w-4" />
+                Invités max.
+              </Label>
+              <Input
+                id="maxGuests"
+                name="maxGuests"
+                type="number"
+                min="1"
+                value={formData.maxGuests}
+                onChange={handleChange}
+                placeholder="Ex: 20"
+                required
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="maxGuests">
-              <PartyPopper className="inline-block mr-2 h-4 w-4" />
-              Nombre maximum d'invités
-            </Label>
-            <Input
-              id="maxGuests"
-              name="maxGuests"
-              type="number"
-              min="1"
-              value={formData.maxGuests}
-              onChange={handleChange}
-              placeholder="Ex: 20"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="type">Type d'événement</Label>
-            <select
-              id="type"
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              required
-            >
-              <option value="PUBLIC">Public</option>
-              <option value="PRIVATE">Privé</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-4 pt-4">
+          <div className="flex justify-end gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
