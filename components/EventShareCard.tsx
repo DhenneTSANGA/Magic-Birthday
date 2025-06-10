@@ -1,10 +1,10 @@
 'use client'
 
-import { Copy, Share2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { toast } from 'sonner'
+import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Copy, Mail, Share2 } from "lucide-react"
+import { toast } from "sonner"
 import { Event } from '@/types/event'
 
 interface EventShareCardProps {
@@ -12,86 +12,73 @@ interface EventShareCardProps {
 }
 
 export function EventShareCard({ event }: EventShareCardProps) {
-  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/evenement/${event.code}`
+  const [copying, setCopying] = useState(false)
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(event.code)
-    toast.success('Code copié dans le presse-papiers')
+  const inviteLink = `${window.location.origin}/invitation/${event.code}`
+
+  const copyToClipboard = async () => {
+    try {
+      setCopying(true)
+      await navigator.clipboard.writeText(inviteLink)
+      toast.success("Lien copié dans le presse-papiers")
+    } catch (error) {
+      console.error("Error copying to clipboard:", error)
+      toast.error("Impossible de copier le lien")
+    } finally {
+      setCopying(false)
+    }
   }
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareUrl)
-    toast.success('Lien copié dans le presse-papiers')
-  }
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
+  const shareEvent = async () => {
+    try {
+      if (navigator.share) {
         await navigator.share({
-          title: `Invitation à ${event.name}`,
-          text: `Tu es invité(e) à ${event.name} ! Utilise le code ${event.code} pour accéder à l'événement.`,
-          url: shareUrl,
+          title: `Invitation : ${event.name}`,
+          text: `Vous êtes invité(e) à l'événement "${event.name}"`,
+          url: inviteLink,
         })
-      } catch (error) {
-        // L'utilisateur a annulé le partage
+      } else {
+        await copyToClipboard()
       }
+    } catch (error) {
+      console.error("Error sharing:", error)
+      // L'utilisateur a annulé le partage, pas besoin d'afficher une erreur
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Partage</CardTitle>
-        <CardDescription>
-          Partagez cet événement avec vos invités
-        </CardDescription>
+        <CardTitle>Partager l'invitation</CardTitle>
+        <CardDescription>Invitez vos amis à rejoindre l'événement</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Code de l'événement</label>
-          <div className="flex gap-2">
-            <Input
-              value={event.code}
-              readOnly
-              className="font-mono text-center h-8 text-sm"
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleCopyCode}
-              className="shrink-0 h-8 w-8"
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
-          </div>
+        <div className="flex items-center justify-between rounded-lg border border-blue-100 bg-blue-50 p-3">
+          <span className="text-sm text-blue-800 truncate">{inviteLink}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+            onClick={copyToClipboard}
+            disabled={copying}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
         </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Lien de partage</label>
-          <div className="flex gap-2">
-            <Input
-              value={shareUrl}
-              readOnly
-              className="text-xs h-8"
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleCopyLink}
-              className="shrink-0 h-8 w-8"
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
-          </div>
+        <div className="flex flex-col gap-2">
+          <Button className="w-full bg-blue-600 hover:bg-blue-700">
+            <Mail className="mr-2 h-4 w-4" />
+            Envoyer par email
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+            onClick={shareEvent}
+          >
+            <Share2 className="mr-2 h-4 w-4" />
+            Partager le lien
+          </Button>
         </div>
-
-        <Button
-          className="w-full h-8 text-sm"
-          onClick={handleShare}
-        >
-          <Share2 className="mr-2 h-3 w-3" />
-          Partager l'événement
-        </Button>
       </CardContent>
     </Card>
   )
