@@ -10,6 +10,23 @@ import { toast } from "sonner"
 import { formatDate } from "@/utils/event"
 import { supabase } from "@/lib/supabase"
 import { EventEditDialog } from "@/components/EventEditDialog"
+import { cn } from "@/lib/utils"
+
+// Définition des couleurs pour les événements
+const eventColors = [
+  "bg-blue-50 border-blue-200 dark:bg-blue-950/50 dark:border-blue-800",
+  "bg-purple-50 border-purple-200 dark:bg-purple-950/50 dark:border-purple-800",
+  "bg-pink-50 border-pink-200 dark:bg-pink-950/50 dark:border-pink-800",
+  "bg-orange-50 border-orange-200 dark:bg-orange-950/50 dark:border-orange-800",
+  "bg-green-50 border-green-200 dark:bg-green-950/50 dark:border-green-800",
+  "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/50 dark:border-yellow-800",
+]
+
+// Fonction pour obtenir une couleur basée sur le code de l'événement
+function getEventColor(code: string) {
+  const index = Math.abs(code.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % eventColors.length
+  return eventColors[index]
+}
 
 export default function MesEvenementsPage() {
   const router = useRouter()
@@ -126,28 +143,35 @@ export default function MesEvenementsPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {events.map((event) => (
-          <Card key={event.code}>
+          <Card 
+            key={event.code}
+            className={cn(
+              "transition-colors duration-300",
+              getEventColor(event.code)
+            )}
+          >
             <CardHeader>
               <CardTitle>{event.name}</CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-gray-300">
                 {formatDate(event.date)} à {event.time}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-2">
+              <p className="text-sm text-muted-foreground mb-2 dark:text-gray-300">
                 <span className="font-medium">Lieu :</span> {event.location}
               </p>
-              <p className="text-sm mb-2">
+              <p className="text-sm mb-2 dark:text-gray-300">
                 <span className="font-medium">Créé par :</span>{' '}
                 {event.createdBy.firstName} {event.createdBy.lastName}
               </p>
-              <p className="text-sm">{event.description}</p>
+              <p className="text-sm dark:text-gray-300">{event.description}</p>
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => router.push(`/evenement/${event.code}`)}
+                className="bg-white/80 dark:bg-gray-800/80"
               >
                 <Eye className="h-4 w-4 mr-1" />
                 Voir
@@ -156,6 +180,7 @@ export default function MesEvenementsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => handleEdit(event)}
+                className="bg-white/80 dark:bg-gray-800/80"
               >
                 <Pencil className="h-4 w-4 mr-1" />
                 Modifier

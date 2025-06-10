@@ -96,6 +96,28 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
   }
+}
+
+/* Styles spécifiques pour le mode sombre */
+.dark {
+  color-scheme: dark;
+}
+
+/* Amélioration des transitions pour le changement de thème */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Styles pour les images en mode sombre */
+.dark img {
+  filter: brightness(.8) contrast(1.2);
+}
+
+/* Styles pour les ombres en mode sombre */
+.dark .shadow-lg {
+  --tw-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+  --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
