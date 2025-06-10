@@ -174,7 +174,6 @@ export async function POST(request: NextRequest) {
         description: data.description,
         type: data.type || 'PUBLIC',
         maxGuests: data.maxGuests || 0,
-        userId: user.id,
         code,
         status: 'DRAFT',
         createdBy: {
