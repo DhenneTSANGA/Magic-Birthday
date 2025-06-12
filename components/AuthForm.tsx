@@ -121,6 +121,42 @@ export function AuthForm({ mode }: AuthFormProps) {
                         : "Créez un nouveau compte"}
                 </CardDescription>
             </CardHeader>
+
+            <div className="px-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={handleGitHubLogin}
+                        disabled={loading}
+                    >
+                        <Github className="mr-2 h-4 w-4" />
+                        GitHub
+                    </Button>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={handleGoogleLogin}
+                        disabled={loading}
+                    >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Google
+                    </Button>
+                </div>
+
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">Ou avec email</span>
+                    </div>
+                </div>
+            </div>
+
             <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                     {mode === "register" && (
@@ -178,38 +214,6 @@ export function AuthForm({ mode }: AuthFormProps) {
                     </Button>
                 </CardFooter>
             </form>
-            <div className="space-y-4">
-                <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">Ou continuer avec</span>
-                    </div>
-                </div>
-
-                <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleGitHubLogin}
-                    disabled={loading}
-                >
-                    <Github className="mr-2 h-4 w-4" />
-                    GitHub
-                </Button>
-
-                <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleGoogleLogin}
-                    disabled={loading}
-                >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Google
-                </Button>
-            </div>
         </Card>
     );
 } 
