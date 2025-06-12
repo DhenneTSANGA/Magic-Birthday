@@ -5,62 +5,106 @@ import { cookies } from "next/headers"
 
 // GET /api/notifications - Récupérer les notifications de l'utilisateur
 export async function GET(request: NextRequest) {
+  console.log("[API] GET /api/notifications - Début de la requête")
+  
   try {
-    console.log("GET /api/notifications - Début de la requête")
+    // Vérifier les variables d'environnement
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error("[API] Variables d'environnement manquantes")
+      return NextResponse.json(
+        { error: "Configuration serveur incorrecte", details: "Variables d'environnement manquantes" },
+        { status: 500 }
+      )
+    }
 
     // Créer un client Supabase pour le middleware
+    console.log("[API] Création du client Supabase")
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         cookies: {
           async get(name: string) {
             const cookieStore = cookies()
             const cookie = await cookieStore.get(name)
+            console.log(`[API] Cookie ${name}:`, cookie?.value ? "présent" : "absent")
             return cookie?.value
           },
           async set(name: string, value: string, options: any) {
             const cookieStore = cookies()
             await cookieStore.set(name, value, options)
+            console.log(`[API] Cookie ${name} défini`)
           },
           async remove(name: string, options: any) {
             const cookieStore = cookies()
             await cookieStore.delete(name, options)
+            console.log(`[API] Cookie ${name} supprimé`)
           },
         },
       }
     )
 
-    console.log("GET /api/notifications - Client Supabase créé")
-
     // Vérifier la session
+    console.log("[API] Vérification de la session")
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
     if (sessionError) {
-      console.error("GET /api/notifications - Erreur de session:", sessionError)
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
+      console.error("[API] Erreur de session:", {
+        error: sessionError,
+        message: sessionError.message,
+        status: sessionError.status
+      })
+      return NextResponse.json({ 
+        error: "Non autorisé", 
+        details: sessionError.message,
+        code: sessionError.status 
+      }, { status: 401 })
     }
+    
     if (!session) {
-      console.error("GET /api/notifications - Pas de session")
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
+      console.error("[API] Pas de session")
+      return NextResponse.json({ 
+        error: "Non autorisé", 
+        details: "Aucune session active" 
+      }, { status: 401 })
     }
 
-    console.log("GET /api/notifications - Session valide, userId:", session.user.id)
+    console.log("[API] Session valide, userId:", session.user.id)
 
     try {
+      console.log("[API] Appel du service de notifications")
       const notifications = await notificationService.getForUser(session.user.id)
-      console.log("GET /api/notifications - Notifications récupérées:", notifications.length)
+      console.log("[API] Notifications récupérées:", { count: notifications.length })
       return NextResponse.json(notifications)
     } catch (dbError) {
-      console.error("GET /api/notifications - Erreur base de données:", dbError)
+      console.error("[API] Erreur base de données:", {
+        error: dbError,
+        message: dbError instanceof Error ? dbError.message : "Erreur inconnue",
+        stack: dbError instanceof Error ? dbError.stack : undefined,
+        name: dbError instanceof Error ? dbError.name : undefined
+      })
       return NextResponse.json(
-        { error: "Erreur lors de la récupération des notifications" },
+        { 
+          error: "Erreur lors de la récupération des notifications",
+          details: dbError instanceof Error ? dbError.message : "Erreur inconnue",
+          code: dbError instanceof Error && 'code' in dbError ? (dbError as any).code : undefined
+        },
         { status: 500 }
       )
     }
   } catch (error) {
-    console.error("GET /api/notifications - Erreur générale:", error)
+    console.error("[API] Erreur générale:", {
+      error,
+      message: error instanceof Error ? error.message : "Erreur inconnue",
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    })
     return NextResponse.json(
-      { error: "Erreur serveur" },
+      { 
+        error: "Erreur serveur",
+        details: error instanceof Error ? error.message : "Erreur inconnue",
+        code: error instanceof Error && 'code' in error ? (error as any).code : undefined
+      },
       { status: 500 }
     )
   }

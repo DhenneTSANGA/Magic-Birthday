@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import { formatDate } from "@/utils/event"
-import { supabase } from "@/lib/supabase"
+import { supabase } from "@/utils/supabase"
 import { EventEditDialog } from "@/components/EventEditDialog"
 import { cn } from "@/lib/utils"
 

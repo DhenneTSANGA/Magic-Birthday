@@ -11,7 +11,7 @@ import {
   DropdownMenuFooter,
 } from "@/components/ui/dropdown-menu"
 import { useNotifications } from "@/hooks/useNotifications"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/context/AuthContext"
 import { formatDistanceToNow } from "date-fns"
 import { fr } from "date-fns/locale"
 import { toast } from "sonner"

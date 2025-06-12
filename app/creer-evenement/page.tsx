@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { EventSummaryDialog } from "@/components/EventSummaryDialog"
 import { generateEventCode, formatDate } from "@/utils/event"
-import { supabase } from "@/lib/supabase"
+import { supabase } from "@/utils/supabase"
 
 export default function CreerEvenementPage() {
   const router = useRouter()

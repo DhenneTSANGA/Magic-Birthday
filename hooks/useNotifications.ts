@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
-import { useAuth } from "@/hooks/useAuth"
+import { supabase } from "@/utils/supabase"
+import { useAuth } from "@/context/AuthContext"
 import { toast } from "sonner"
 
 interface Notification {
@@ -14,134 +14,181 @@ interface Notification {
   updatedAt: Date
 }
 
+interface ApiError {
+  error: string
+  details?: string
+  code?: string | number
+}
+
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
-  // Charger les notifications
   const loadNotifications = async () => {
-    try {
-      if (!user) {
-        setNotifications([])
-        return
-      }
-
-      const response = await fetch("/api/notifications")
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Erreur inconnue" }))
-        throw new Error(errorData.error || "Erreur lors du chargement des notifications")
-      }
-      const data = await response.json()
-      setNotifications(data)
-    } catch (error) {
-      console.error("Erreur lors du chargement des notifications:", error)
-      toast.error(error instanceof Error ? error.message : "Impossible de charger les notifications")
-      setNotifications([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Marquer des notifications comme lues
-  const markAsRead = async (notificationIds: string[]) => {
-    try {
-      if (!user) {
-        throw new Error("Utilisateur non authentifié")
-      }
-
-      const response = await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ notificationIds }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Erreur inconnue" }))
-        throw new Error(errorData.error || "Erreur lors de la mise à jour des notifications")
-      }
-
-      setNotifications((prev) =>
-        prev.map((notif) =>
-          notificationIds.includes(notif.id)
-            ? { ...notif, read: true }
-            : notif
-        )
-      )
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour des notifications:", error)
-      toast.error(error instanceof Error ? error.message : "Impossible de marquer les notifications comme lues")
-    }
-  }
-
-  // Supprimer des notifications
-  const deleteNotifications = async (notificationIds: string[]) => {
-    try {
-      if (!user) {
-        throw new Error("Utilisateur non authentifié")
-      }
-
-      const response = await fetch("/api/notifications", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ notificationIds }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Erreur inconnue" }))
-        throw new Error(errorData.error || "Erreur lors de la suppression des notifications")
-      }
-
-      setNotifications((prev) =>
-        prev.filter((notif) => !notificationIds.includes(notif.id))
-      )
-    } catch (error) {
-      console.error("Erreur lors de la suppression des notifications:", error)
-      toast.error(error instanceof Error ? error.message : "Impossible de supprimer les notifications")
-    }
-  }
-
-  useEffect(() => {
     if (!user) {
+      console.log("[useNotifications] Pas d'utilisateur connecté")
       setNotifications([])
       setLoading(false)
       return
     }
 
+    try {
+      console.log("[useNotifications] Chargement des notifications pour l'utilisateur:", user.id)
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch("/api/notifications")
+      console.log("[useNotifications] Réponse du serveur:", {
+        status: response.status,
+        ok: response.ok
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json() as ApiError
+        console.error("[useNotifications] Erreur serveur:", {
+          status: response.status,
+          error: errorData
+        })
+        throw new Error(
+          errorData.details || errorData.error || "Erreur lors de la récupération des notifications"
+        )
+      }
+
+      const data = await response.json()
+      console.log("[useNotifications] Notifications reçues:", {
+        count: data.length,
+        notifications: data.map((n: Notification) => ({
+          id: n.id,
+          type: n.type,
+          read: n.read,
+          createdAt: n.createdAt
+        }))
+      })
+
+      setNotifications(data)
+    } catch (err) {
+      console.error("[useNotifications] Erreur lors du chargement des notifications:", {
+        error: err,
+        message: err instanceof Error ? err.message : "Erreur inconnue",
+        stack: err instanceof Error ? err.stack : undefined
+      })
+      const errorMessage = err instanceof Error ? err.message : "Erreur lors de la récupération des notifications"
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const markAsRead = async (notificationIds: string[]) => {
+    if (!user) {
+      console.log("[useNotifications] Pas d'utilisateur connecté pour marquer comme lu")
+      return
+    }
+
+    try {
+      console.log("[useNotifications] Marquage des notifications comme lues:", notificationIds)
+      const response = await fetch(`/api/notifications/${notificationIds.join(",")}`, {
+        method: "PATCH",
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json() as ApiError
+        console.error("[useNotifications] Erreur lors du marquage comme lu:", {
+          status: response.status,
+          error: errorData
+        })
+        throw new Error(
+          errorData.details || errorData.error || "Erreur lors du marquage des notifications"
+        )
+      }
+
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notificationIds.includes(notification.id)
+            ? { ...notification, read: true }
+            : notification
+        )
+      )
+    } catch (err) {
+      console.error("[useNotifications] Erreur lors du marquage comme lu:", {
+        error: err,
+        message: err instanceof Error ? err.message : "Erreur inconnue",
+        stack: err instanceof Error ? err.stack : undefined
+      })
+      const errorMessage = err instanceof Error ? err.message : "Impossible de marquer les notifications comme lues"
+      toast.error(errorMessage)
+    }
+  }
+
+  const deleteNotifications = async (notificationIds: string[]) => {
+    if (!user) {
+      console.log("[useNotifications] Pas d'utilisateur connecté pour supprimer")
+      return
+    }
+
+    try {
+      console.log("[useNotifications] Suppression des notifications:", notificationIds)
+      const response = await fetch(`/api/notifications/${notificationIds.join(",")}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json() as ApiError
+        console.error("[useNotifications] Erreur lors de la suppression:", {
+          status: response.status,
+          error: errorData
+        })
+        throw new Error(
+          errorData.details || errorData.error || "Erreur lors de la suppression des notifications"
+        )
+      }
+
+      setNotifications((prev) =>
+        prev.filter((notification) => !notificationIds.includes(notification.id))
+      )
+    } catch (err) {
+      console.error("[useNotifications] Erreur lors de la suppression:", {
+        error: err,
+        message: err instanceof Error ? err.message : "Erreur inconnue",
+        stack: err instanceof Error ? err.stack : undefined
+      })
+      const errorMessage = err instanceof Error ? err.message : "Impossible de supprimer les notifications"
+      toast.error(errorMessage)
+    }
+  }
+
+  useEffect(() => {
+    console.log("[useNotifications] Effet de chargement initial")
     loadNotifications()
 
-    // S'abonner aux nouvelles notifications via Supabase Realtime
-    const channel = supabase
-      .channel(`notifications:${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "Notification",
-          filter: `userId=eq.${user.id}`,
-        },
-        (payload) => {
-          setNotifications((prev) => [...prev, payload.new as Notification])
-        }
-      )
-      .subscribe()
+    // S'abonner aux changements d'authentification
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[useNotifications] Changement d'état d'authentification:", {
+        event,
+        userId: session?.user?.id
+      })
+      if (event === "SIGNED_IN") {
+        loadNotifications()
+      } else if (event === "SIGNED_OUT") {
+        setNotifications([])
+      }
+    })
 
     return () => {
-      supabase.removeChannel(channel)
+      console.log("[useNotifications] Nettoyage de l'effet")
+      authListener?.subscription.unsubscribe()
     }
   }, [user])
 
   return {
     notifications,
     loading,
-    unreadCount: notifications.filter((n) => !n.read).length,
+    error,
+    loadNotifications,
     markAsRead,
     deleteNotifications,
-    refresh: loadNotifications,
   }
 } 

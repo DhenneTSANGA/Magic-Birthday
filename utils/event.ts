@@ -1,5 +1,5 @@
-import { PrismaClient, Event, EventStatus, EventType } from '@prisma/client'
-import { supabase } from '@/lib/supabase'
+import { PrismaClient, Event as PrismaEvent, EventStatus, EventType } from '@prisma/client'
+import { supabase } from '@/utils/supabase'
 
 const prisma = new PrismaClient()
 
@@ -50,14 +50,14 @@ export function formatDate(date: string | Date): string {
 /**
  * Interface pour les données d'un événement
  */
-export interface Event {
+export interface EventData {
     id: string;
     code: string;
     name: string;
     date: Date;
     time: string;
     location: string;
-    description?: string;
+    description: string | null;
     type: EventType;
     status: EventStatus;
     maxGuests: number;
@@ -94,59 +94,41 @@ export type UpdateEventData = Partial<CreateEventData> & {
  * @param userId L'ID de l'utilisateur Supabase
  * @returns L'utilisateur Prisma
  */
-async function ensureUserExists(userId: string) {
+export async function ensureUserExists(userId: string) {
   try {
-    // Récupérer les informations de l'utilisateur depuis Supabase
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    console.log('Supabase user data:', user);
-    console.log('Supabase user error:', userError);
-    
-    if (userError) {
-      console.error('Erreur lors de la récupération des données utilisateur:', userError);
-      throw new Error('Impossible de récupérer les données utilisateur');
-    }
-
-    if (!user) {
-      throw new Error('Utilisateur non trouvé');
-    }
+    console.log('[ensureUserExists] Début de la vérification pour userId:', userId);
 
     // Vérifier si l'utilisateur existe déjà dans Prisma
     let prismaUser = await prisma.user.findUnique({
       where: { id: userId }
     });
 
-    console.log('Existing Prisma user:', prismaUser);
+    console.log('[ensureUserExists] Utilisateur Prisma existant:', prismaUser);
 
     if (!prismaUser) {
-      // Créer l'utilisateur dans Prisma avec les données de Supabase
+      console.log('[ensureUserExists] Création d\'un nouvel utilisateur dans Prisma');
+      // Créer l'utilisateur dans Prisma avec un email temporaire
       prismaUser = await prisma.user.create({
         data: {
           id: userId,
-          email: user.email || `${userId}@temp.com`,
-          firstName: user.user_metadata?.firstName || user.email?.split('@')[0] || 'Utilisateur',
-          lastName: user.user_metadata?.lastName || 'Anonyme',
+          email: `${userId}@temp.com`,
+          firstName: 'Utilisateur',
+          lastName: 'Anonyme',
           password: '', // Le mot de passe est géré par Supabase
         }
       });
-      console.log('Created new Prisma user:', prismaUser);
-    } else {
-      // Mettre à jour l'utilisateur avec les dernières données de Supabase
-      prismaUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-          email: user.email || prismaUser.email,
-          firstName: user.user_metadata?.firstName || prismaUser.firstName,
-          lastName: user.user_metadata?.lastName || prismaUser.lastName,
-        }
-      });
-      console.log('Updated Prisma user:', prismaUser);
+      console.log('[ensureUserExists] Nouvel utilisateur Prisma créé:', prismaUser);
     }
 
     return prismaUser;
   } catch (error) {
-    console.error('Erreur lors de la vérification/création de l\'utilisateur:', error);
-    throw new Error('Impossible de vérifier/créer l\'utilisateur');
+    console.error('[ensureUserExists] Erreur détaillée:', {
+      error,
+      message: error instanceof Error ? error.message : 'Erreur inconnue',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
+    throw new Error(`Impossible de vérifier/créer l'utilisateur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
   }
 }
 
@@ -155,7 +137,7 @@ async function ensureUserExists(userId: string) {
  * @param eventData Les données de l'événement à créer
  * @returns L'événement créé
  */
-export async function createEvent(data: CreateEventData): Promise<Event> {
+export async function createEvent(data: CreateEventData): Promise<EventData> {
     try {
         const code = generateEventCode()
         console.log('Données reçues dans createEvent:', data)
@@ -173,7 +155,7 @@ export async function createEvent(data: CreateEventData): Promise<Event> {
                 date: eventDate,
                 time: data.time,
                 location: data.location,
-                description: data.description,
+                description: data.description || null,
                 type: data.type || 'PUBLIC',
                 maxGuests: data.maxGuests || 0,
                 userId: data.userId,
@@ -195,15 +177,15 @@ export async function createEvent(data: CreateEventData): Promise<Event> {
 
         console.log('Événement créé dans la base de données:', event)
 
-        // Transformer l'événement pour correspondre à l'interface Event
-        const transformedEvent: Event = {
+        // Transformer l'événement pour correspondre à l'interface EventData
+        const transformedEvent: EventData = {
             id: event.id,
             code: event.code,
             name: event.name,
             date: event.date,
             time: event.time,
             location: event.location,
-            description: event.description || undefined,
+            description: event.description,
             type: event.type,
             status: event.status,
             maxGuests: event.maxGuests,
@@ -296,10 +278,11 @@ export async function getEventByCode(code: string) {
 }
 
 /**
- * Récupère tous les événements d'un utilisateur
+ * Récupère les événements d'un utilisateur
+ * @param userId L'ID de l'utilisateur
  * @returns La liste des événements ou un tableau vide en cas d'erreur
  */
-export async function getUserEvents(userId: string): Promise<Event[]> {
+export async function getUserEvents(userId: string): Promise<EventData[]> {
   try {
     const events = await prisma.event.findMany({
       where: { userId },
@@ -307,10 +290,10 @@ export async function getUserEvents(userId: string): Promise<Event[]> {
         createdBy: {
           select: {
             id: true,
+            email: true,
             firstName: true,
             lastName: true,
             avatar: true,
-            email: true,
           },
         },
         invites: {
@@ -318,55 +301,111 @@ export async function getUserEvents(userId: string): Promise<Event[]> {
             user: {
               select: {
                 id: true,
+                email: true,
                 firstName: true,
                 lastName: true,
                 avatar: true,
-                email: true,
               },
             },
           },
         },
         _count: {
           select: {
+            comments: true,
             invites: true,
             activities: true,
-            comments: true,
           },
         },
       },
-      orderBy: {
-        date: 'asc',
-      },
-    })
+      orderBy: { date: 'desc' },
+    });
 
-    return events
+    return events.map(event => ({
+      id: event.id,
+      code: event.code,
+      name: event.name,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      description: event.description,
+      type: event.type,
+      status: event.status,
+      maxGuests: event.maxGuests,
+      userId: event.userId,
+      createdBy: {
+        id: event.createdBy.id,
+        firstName: event.createdBy.firstName,
+        lastName: event.createdBy.lastName,
+        avatar: event.createdBy.avatar,
+        email: event.createdBy.email,
+      },
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt,
+    }));
   } catch (error) {
-    console.error('Erreur lors de la récupération des événements:', error)
-    throw new Error('Impossible de récupérer les événements')
+    console.error('Erreur lors de la récupération des événements:', error);
+    return [];
   }
 }
 
-export async function updateEvent(code: string, data: UpdateEventData): Promise<Event> {
+/**
+ * Met à jour un événement
+ * @param code Le code de l'événement
+ * @param data Les données à mettre à jour
+ * @returns L'événement mis à jour
+ */
+export async function updateEvent(code: string, data: UpdateEventData): Promise<EventData> {
   try {
     const event = await prisma.event.update({
       where: { code },
-      data,
+      data: {
+        name: data.name,
+        date: data.date ? new Date(data.date) : undefined,
+        time: data.time,
+        location: data.location,
+        description: data.description,
+        type: data.type,
+        maxGuests: data.maxGuests,
+        status: data.status,
+      },
       include: {
         createdBy: {
           select: {
             id: true,
+            email: true,
             firstName: true,
             lastName: true,
             avatar: true,
-            email: true,
           },
         },
       },
-    })
-    return event
+    });
+
+    return {
+      id: event.id,
+      code: event.code,
+      name: event.name,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      description: event.description,
+      type: event.type,
+      status: event.status,
+      maxGuests: event.maxGuests,
+      userId: event.userId,
+      createdBy: {
+        id: event.createdBy.id,
+        firstName: event.createdBy.firstName,
+        lastName: event.createdBy.lastName,
+        avatar: event.createdBy.avatar,
+        email: event.createdBy.email,
+      },
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt,
+    };
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de l\'événement:', error)
-    throw new Error('Impossible de mettre à jour l\'événement')
+    console.error('Erreur lors de la mise à jour de l\'événement:', error);
+    throw new Error('Impossible de mettre à jour l\'événement');
   }
 }
 

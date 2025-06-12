@@ -106,6 +106,8 @@ export async function GET(request: NextRequest) {
 // POST /api/events - Créer un nouvel événement
 export async function POST(request: NextRequest) {
   try {
+    console.log('[API] Début de la création d\'événement')
+    
     // Créer un client Supabase côté serveur
     const cookieStore = cookies()
     const supabase = createServerClient(
@@ -123,6 +125,7 @@ export async function POST(request: NextRequest) {
     // Vérifier l'authentification
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
+      console.error('[API] Erreur d\'authentification:', authError)
       return NextResponse.json(
         { error: 'Non autorisé' },
         { status: 401 }
@@ -131,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     // Récupérer les données de l'événement
     const data = await request.json()
-    console.log('Received event data:', data)
+    console.log('[API] Données reçues:', data)
 
     // Vérifier si l'utilisateur existe dans Prisma
     let prismaUser = await prisma.user.findUnique({
@@ -140,6 +143,7 @@ export async function POST(request: NextRequest) {
 
     // Créer l'utilisateur s'il n'existe pas
     if (!prismaUser) {
+      console.log('[API] Création d\'un nouvel utilisateur dans Prisma')
       prismaUser = await prisma.user.create({
         data: {
           id: user.id,
@@ -149,26 +153,38 @@ export async function POST(request: NextRequest) {
           password: '',
         }
       })
-    } else {
-      // Mettre à jour les informations de l'utilisateur si elles ont changé
-      prismaUser = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          email: user.email || prismaUser.email,
-          firstName: user.user_metadata?.firstName || prismaUser.firstName,
-          lastName: user.user_metadata?.lastName || prismaUser.lastName,
-        }
-      })
     }
 
     // Générer un code unique pour l'événement
     const code = generateEventCode()
 
+    // S'assurer que la date est un objet Date valide
+    const eventDate = new Date(data.date)
+    if (isNaN(eventDate.getTime())) {
+      console.error('[API] Date invalide:', data.date)
+      return NextResponse.json(
+        { error: 'Date invalide' },
+        { status: 400 }
+      )
+    }
+
+    console.log('[API] Création de l\'événement avec les données:', {
+      name: data.name,
+      date: eventDate,
+      time: data.time,
+      location: data.location,
+      description: data.description,
+      type: data.type || 'PUBLIC',
+      maxGuests: data.maxGuests || 0,
+      code,
+      userId: prismaUser.id
+    })
+
     // Créer l'événement
     const event = await prisma.event.create({
       data: {
         name: data.name,
-        date: new Date(data.date),
+        date: eventDate,
         time: data.time,
         location: data.location,
         description: data.description,
@@ -176,11 +192,7 @@ export async function POST(request: NextRequest) {
         maxGuests: data.maxGuests || 0,
         code,
         status: 'DRAFT',
-        createdBy: {
-          connect: {
-            id: prismaUser.id
-          }
-        }
+        userId: prismaUser.id
       },
       include: {
         createdBy: {
@@ -195,10 +207,21 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log('Event créé avec créateur:', event.createdBy)
+    console.log('[API] Événement créé avec succès:', {
+      id: event.id,
+      code: event.code,
+      name: event.name,
+      date: event.date,
+      userId: event.userId
+    })
+
     return NextResponse.json(event)
   } catch (error) {
-    console.error('Error creating event:', error)
+    console.error('[API] Erreur lors de la création de l\'événement:', {
+      error,
+      message: error instanceof Error ? error.message : 'Erreur inconnue',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return NextResponse.json(
       { error: 'Erreur lors de la création de l\'événement' },
       { status: 500 }

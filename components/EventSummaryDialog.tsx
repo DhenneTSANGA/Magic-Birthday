@@ -26,8 +26,8 @@ export function EventSummaryDialog({ isOpen, onClose, eventData }: EventSummaryD
 
     useEffect(() => {
         if (eventData) {
-            // Construire l'URL de partage
-            const url = `${window.location.origin}/evenement/${eventData.code}`;
+            // Construire l'URL de partage vers la page d'invitation
+            const url = `${window.location.origin}/invitation/${eventData.code}`;
             setShareUrl(url);
         }
     }, [eventData]);
@@ -57,7 +57,7 @@ export function EventSummaryDialog({ isOpen, onClose, eventData }: EventSummaryD
             try {
                 await navigator.share({
                     title: `Invitation à ${eventData.title}`,
-                    text: `Tu es invité(e) à ${eventData.title} ! Utilise le code ${eventData.code} pour accéder à l'événement.`,
+                    text: `Tu es invité(e) à ${eventData.title} ! Clique sur le lien pour répondre à l'invitation.`,
                     url: shareUrl,
                 });
                 toast.success("Invitation partagée avec succès");
@@ -124,7 +124,7 @@ export function EventSummaryDialog({ isOpen, onClose, eventData }: EventSummaryD
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-sm font-medium">Lien de partage</label>
+                        <label className="text-sm font-medium">Lien d'invitation</label>
                         <div className="flex gap-2">
                             <Input
                                 value={shareUrl}
@@ -147,11 +147,11 @@ export function EventSummaryDialog({ isOpen, onClose, eventData }: EventSummaryD
                         onClick={handleShare}
                     >
                         <Share2 className="mr-2 h-3 w-3" />
-                        Partager l'événement
+                        Partager l'invitation
                     </Button>
 
                     <p className="text-xs text-center text-muted-foreground">
-                        Partagez ce code ou ce lien avec vos invités pour qu'ils puissent accéder à l'événement.
+                        Partagez ce lien avec vos invités pour qu'ils puissent répondre à l'invitation.
                     </p>
                 </div>
                 <DialogFooter className="mt-4">
