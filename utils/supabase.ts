@@ -72,6 +72,46 @@ export const auth = {
         }
     },
 
+    async loginWithGitHub() {
+        try {
+            console.log('Auth - Tentative de connexion avec GitHub...');
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'github',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`
+                }
+            });
+
+            if (error) throw error;
+
+            console.log('Auth - Redirection vers GitHub...');
+            return data;
+        } catch (error) {
+            console.error('Auth - Erreur lors de la connexion avec GitHub:', error);
+            throw error;
+        }
+    },
+
+    async loginWithGoogle() {
+        try {
+            console.log('Auth - Tentative de connexion avec Google...');
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`
+                }
+            });
+
+            if (error) throw error;
+
+            console.log('Auth - Redirection vers Google...');
+            return data;
+        } catch (error) {
+            console.error('Auth - Erreur lors de la connexion avec Google:', error);
+            throw error;
+        }
+    },
+
     async logout() {
         try {
             console.log('Auth - Déconnexion...');
