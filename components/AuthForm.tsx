@@ -20,6 +20,8 @@ export function AuthForm({ mode }: AuthFormProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [name, setName] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [verificationSent, setVerificationSent] = useState(false);
@@ -31,17 +33,18 @@ export function AuthForm({ mode }: AuthFormProps) {
 
         try {
             if (mode === "register") {
-                const { user } = await auth.createAccount(email, password, name);
+                const { user } = await auth.createAccount(email, password, name, firstName, lastName);
                 if (user?.identities?.length === 0) {
                     setError("Un compte existe déjà avec cet email");
                     return;
                 }
                 setVerificationSent(true);
             } else {
-                await auth.login(email, password);
-                const callbackUrl = searchParams.get("callbackUrl") || "/";
-                router.push(callbackUrl);
-                router.refresh();
+                const { user } = await auth.login(email, password);
+                if (user) {
+                    router.push("/");
+                    router.refresh();
+                }
             }
         } catch (err: any) {
             setError(err.message || "Une erreur est survenue");
@@ -53,6 +56,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     const handleGitHubLogin = async () => {
         try {
             await auth.loginWithGitHub();
+            // La redirection sera gérée par le callback OAuth
         } catch (error) {
             console.error('Erreur lors de la connexion avec GitHub:', error);
             setError('Erreur lors de la connexion avec GitHub');
@@ -62,6 +66,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     const handleGoogleLogin = async () => {
         try {
             await auth.loginWithGoogle();
+            // La redirection sera gérée par le callback OAuth
         } catch (error) {
             console.error('Erreur lors de la connexion avec Google:', error);
             setError('Erreur lors de la connexion avec Google');
@@ -160,17 +165,43 @@ export function AuthForm({ mode }: AuthFormProps) {
             <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                     {mode === "register" && (
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Nom</Label>
-                            <Input
-                                id="name"
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
-                                placeholder="Votre nom"
-                            />
-                        </div>
+                        <>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="firstName">Prénom</Label>
+                                    <Input
+                                        id="firstName"
+                                        type="text"
+                                        value={firstName}
+                                        onChange={(e) => setFirstName(e.target.value)}
+                                        required
+                                        placeholder="Votre prénom"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="lastName">Nom</Label>
+                                    <Input
+                                        id="lastName"
+                                        type="text"
+                                        value={lastName}
+                                        onChange={(e) => setLastName(e.target.value)}
+                                        required
+                                        placeholder="Votre nom"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Nom d'utilisateur</Label>
+                                <Input
+                                    id="name"
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    required
+                                    placeholder="Votre nom d'utilisateur"
+                                />
+                            </div>
+                        </>
                     )}
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>

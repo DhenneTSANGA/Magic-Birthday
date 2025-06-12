@@ -6,6 +6,8 @@ export interface User {
     id: string;
     email: string;
     name?: string;
+    firstName?: string;
+    lastName?: string;
 }
 
 // Initialisation du client Supabase
@@ -18,26 +20,37 @@ export const supabase = createBrowserClient(
 export const auth = {
     supabase,
 
-    async createAccount(email: string, password: string, name: string) {
+    async createAccount(email: string, password: string, name: string, firstName: string, lastName: string) {
         try {
             console.log('Auth - Création du compte...');
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
-                    data: { name },
+                    data: { 
+                        name,
+                        firstName,
+                        lastName
+                    },
                     emailRedirectTo: `${window.location.origin}/auth/callback`
                 }
             });
 
             if (error) throw error;
 
+            // Vérifier si l'email de confirmation a été envoyé
+            if (data?.user?.identities?.length === 0) {
+                throw new Error("Un compte existe déjà avec cet email");
+            }
+
             console.log('Auth - Compte créé avec succès');
             return {
                 user: data.user ? {
                     id: data.user.id,
                     email: data.user.email!,
-                    name: data.user.user_metadata.name
+                    name: data.user.user_metadata.name,
+                    firstName: data.user.user_metadata.firstName,
+                    lastName: data.user.user_metadata.lastName
                 } : null,
                 session: data.session
             };
@@ -146,7 +159,9 @@ export const auth = {
             return {
                 id: user.id,
                 email: user.email!,
-                name: user.user_metadata.name
+                name: user.user_metadata.name,
+                firstName: user.user_metadata.firstName,
+                lastName: user.user_metadata.lastName
             };
         } catch (error) {
             console.error('Auth - Erreur lors de la récupération de l\'utilisateur:', error);

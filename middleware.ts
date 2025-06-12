@@ -1,6 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 // Routes protégées qui nécessitent une authentification
 const protectedRoutes = ["/mon-compte", "/creer-evenement", "/mes-evenements"];
