@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { supabase } from "@/lib/supabase"
+import { supabase } from "@/utils/supabase"
 
 export default function ModifierEvenementPage({ params }: { params: { code: string } }) {
   const router = useRouter()
