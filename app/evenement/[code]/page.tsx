@@ -11,6 +11,8 @@ import { Metadata } from 'next'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { EventShareCard } from '@/components/EventShareCard'
+import { Textarea } from '@/components/ui/textarea'
+import { CommentForm } from '@/components/CommentForm'
 
 interface EventPageProps {
   params: {
@@ -182,6 +184,9 @@ export default async function EventPage({ params }: EventPageProps) {
               ) : (
                 <p className="text-gray-600">Aucun commentaire pour le moment.</p>
               )}
+
+              {/* Formulaire de commentaire */}
+              <CommentForm eventCode={event.code} />
             </CardContent>
           </Card>
         </div>
