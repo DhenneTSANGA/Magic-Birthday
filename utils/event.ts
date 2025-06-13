@@ -108,12 +108,13 @@ export async function ensureUserExists(userId: string) {
     if (!prismaUser) {
       console.log('[ensureUserExists] Création d\'un nouvel utilisateur dans Prisma');
       // Créer l'utilisateur dans Prisma avec un email temporaire
+      const user = await supabase.auth.getUser(userId);
       prismaUser = await prisma.user.create({
         data: {
           id: userId,
           email: `${userId}@temp.com`,
-          firstName: 'Utilisateur',
-          lastName: 'Anonyme',
+          firstName: user.user_metadata?.firstName || user.user_metadata?.name?.split(' ')[0] || 'Utilisateur',
+          lastName: user.user_metadata?.lastName || user.user_metadata?.name?.split(' ').slice(1).join(' ') || 'Anonyme',
           password: '', // Le mot de passe est géré par Supabase
         }
       });

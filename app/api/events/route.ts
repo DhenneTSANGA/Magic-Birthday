@@ -148,9 +148,18 @@ export async function POST(request: NextRequest) {
         data: {
           id: user.id,
           email: user.email || `${user.id}@temp.com`,
-          firstName: user.user_metadata?.firstName || user.email?.split('@')[0] || 'Utilisateur',
-          lastName: user.user_metadata?.lastName || 'Anonyme',
+          firstName: user.user_metadata?.firstName || user.user_metadata?.name?.split(' ')[0] || user.email?.split('@')[0] || 'Utilisateur',
+          lastName: user.user_metadata?.lastName || user.user_metadata?.name?.split(' ').slice(1).join(' ') || 'Anonyme',
           password: '',
+        }
+      })
+    } else {
+      // Mettre à jour les informations de l'utilisateur si elles ont changé dans Supabase
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          firstName: user.user_metadata?.firstName || user.user_metadata?.name?.split(' ')[0] || prismaUser.firstName,
+          lastName: user.user_metadata?.lastName || user.user_metadata?.name?.split(' ').slice(1).join(' ') || prismaUser.lastName,
         }
       })
     }
@@ -212,10 +221,18 @@ export async function POST(request: NextRequest) {
       code: event.code,
       name: event.name,
       date: event.date,
-      userId: event.userId
+      userId: event.userId,
+      createdBy: event.createdBy
     })
 
-    return NextResponse.json(event)
+    return NextResponse.json({
+      ...event,
+      createdBy: {
+        ...event.createdBy,
+        firstName: event.createdBy.firstName || user.user_metadata?.firstName || user.user_metadata?.name?.split(' ')[0] || 'Utilisateur',
+        lastName: event.createdBy.lastName || user.user_metadata?.lastName || user.user_metadata?.name?.split(' ').slice(1).join(' ') || 'Anonyme',
+      }
+    })
   } catch (error) {
     console.error('[API] Erreur lors de la création de l\'événement:', {
       error,
