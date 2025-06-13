@@ -72,6 +72,7 @@ export default function CreerEvenementPage() {
         location: formData.location,
         maxGuests: parseInt(formData.maxGuests) || 0,
         type: formData.type,
+        userId: user.id, // Ajouter l'ID de l'utilisateur
       }
 
       // Appeler l'API pour créer l'événement

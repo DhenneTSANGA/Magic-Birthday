@@ -17,7 +17,6 @@ interface Notification {
 interface ApiError {
   error: string
   details?: string
-  code?: string | number
 }
 
 export function useNotifications() {
@@ -66,6 +65,16 @@ export function useNotifications() {
           createdAt: n.createdAt
         }))
       })
+      // Vérifier s'il y a de nouvelles notifications
+      const currentNotificationIds = new Set(notifications.map(n => n.id))
+      const newNotifications = data.filter((n: Notification) => !currentNotificationIds.has(n.id))
+      
+      if (newNotifications.length > 0) {
+        // Afficher une notification toast pour chaque nouvelle notification
+        newNotifications.forEach(notification => {
+          toast.info(notification.message)
+        })
+      }
 
       setNotifications(data)
     } catch (err) {
@@ -177,16 +186,27 @@ export function useNotifications() {
       }
     })
 
+    // Configurer le polling pour les notifications
+    const pollingInterval = setInterval(() => {
+      if (user) {
+        loadNotifications()
+      }
+    }, 30000) // Vérifier toutes les 30 secondes
+
     return () => {
       console.log("[useNotifications] Nettoyage de l'effet")
       authListener?.subscription.unsubscribe()
+      clearInterval(pollingInterval)
     }
   }, [user])
+
+  const unreadCount = notifications.filter(n => !n.read).length
 
   return {
     notifications,
     loading,
     error,
+    unreadCount,
     loadNotifications,
     markAsRead,
     deleteNotifications,
