@@ -46,7 +46,7 @@ export default function Home() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/60 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-center text-white">
-                  <h3 className="text-lg sm:text-xl font-bold">Créez des moments mémorables</h3>
+                  <h3 className="text-lg sm:text-xl font-bold">Créez des moments inoubliables</h3>
                   <p className="mt-1 text-sm text-white/90">Commencez dès maintenant</p>
                 </div>
               </div>

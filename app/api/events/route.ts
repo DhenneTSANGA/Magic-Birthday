@@ -8,6 +8,70 @@ import { generateEventCode } from '@/utils/event'
 
 const prisma = new PrismaClient()
 
+// Fonction helper pour extraire les informations utilisateur depuis Supabase
+function extractUserInfo(user: any) {
+  console.log('[API] Extraction des informations utilisateur depuis Supabase:', {
+    id: user.id,
+    email: user.email,
+    user_metadata: user.user_metadata,
+    raw_user_meta_data: user.raw_user_meta_data
+  })
+
+  // Essayer différentes sources pour récupérer le nom et prénom
+  let firstName = ''
+  let lastName = ''
+  let fullName = ''
+
+  // 1. Essayer user_metadata (données personnalisées)
+  if (user.user_metadata) {
+    firstName = user.user_metadata.firstName || user.user_metadata.given_name || ''
+    lastName = user.user_metadata.lastName || user.user_metadata.family_name || ''
+    fullName = user.user_metadata.name || user.user_metadata.full_name || ''
+  }
+
+  // 2. Essayer raw_user_meta_data (données brutes des providers)
+  if (!firstName && !lastName && user.raw_user_meta_data) {
+    firstName = user.raw_user_meta_data.first_name || user.raw_user_meta_data.given_name || ''
+    lastName = user.raw_user_meta_data.last_name || user.raw_user_meta_data.family_name || ''
+    fullName = user.raw_user_meta_data.name || user.raw_user_meta_data.full_name || ''
+  }
+
+  // 3. Si on a un nom complet mais pas de prénom/nom séparés, essayer de les extraire
+  if (fullName && (!firstName || !lastName)) {
+    const nameParts = fullName.trim().split(' ')
+    if (nameParts.length >= 2) {
+      firstName = firstName || nameParts[0]
+      lastName = lastName || nameParts.slice(1).join(' ')
+    } else if (nameParts.length === 1) {
+      firstName = firstName || nameParts[0]
+    }
+  }
+
+  // 4. Fallback sur l'email si rien d'autre
+  if (!firstName && !lastName) {
+    const emailPrefix = user.email?.split('@')[0] || 'Utilisateur'
+    firstName = emailPrefix
+    lastName = 'Anonyme'
+  }
+
+  // 5. S'assurer qu'on a au moins quelque chose
+  if (!firstName) firstName = 'Utilisateur'
+  if (!lastName) lastName = 'Anonyme'
+
+  console.log('[API] Informations utilisateur extraites:', {
+    firstName,
+    lastName,
+    fullName,
+    email: user.email
+  })
+
+  return {
+    firstName,
+    lastName,
+    email: user.email || `${user.id}@temp.com`
+  }
+}
+
 // GET /api/events - Récupérer tous les événements de l'utilisateur
 export async function GET(request: NextRequest) {
   try {
@@ -141,25 +205,29 @@ export async function POST(request: NextRequest) {
       where: { id: user.id }
     })
 
+    // Extraire les informations utilisateur depuis Supabase
+    const userInfo = extractUserInfo(user)
+
     // Créer l'utilisateur s'il n'existe pas
     if (!prismaUser) {
-      console.log('[API] Création d\'un nouvel utilisateur dans Prisma')
+      console.log('[API] Création d\'un nouvel utilisateur dans Prisma avec les informations:', userInfo)
       prismaUser = await prisma.user.create({
         data: {
           id: user.id,
-          email: user.email || `${user.id}@temp.com`,
-          firstName: user.user_metadata?.firstName || user.user_metadata?.name?.split(' ')[0] || user.email?.split('@')[0] || 'Utilisateur',
-          lastName: user.user_metadata?.lastName || user.user_metadata?.name?.split(' ').slice(1).join(' ') || 'Anonyme',
+          email: userInfo.email,
+          firstName: userInfo.firstName,
+          lastName: userInfo.lastName,
           password: '',
         }
       })
     } else {
       // Mettre à jour les informations de l'utilisateur si elles ont changé dans Supabase
+      console.log('[API] Mise à jour des informations utilisateur dans Prisma:', userInfo)
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          firstName: user.user_metadata?.firstName || user.user_metadata?.name?.split(' ')[0] || prismaUser.firstName,
-          lastName: user.user_metadata?.lastName || user.user_metadata?.name?.split(' ').slice(1).join(' ') || prismaUser.lastName,
+          firstName: userInfo.firstName,
+          lastName: userInfo.lastName,
         }
       })
     }
@@ -229,8 +297,8 @@ export async function POST(request: NextRequest) {
       ...event,
       createdBy: {
         ...event.createdBy,
-        firstName: event.createdBy.firstName || user.user_metadata?.firstName || user.user_metadata?.name?.split(' ')[0] || 'Utilisateur',
-        lastName: event.createdBy.lastName || user.user_metadata?.lastName || user.user_metadata?.name?.split(' ').slice(1).join(' ') || 'Anonyme',
+        firstName: event.createdBy.firstName || userInfo.firstName,
+        lastName: event.createdBy.lastName || userInfo.lastName,
       }
     })
   } catch (error) {

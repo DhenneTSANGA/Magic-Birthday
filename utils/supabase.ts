@@ -164,13 +164,60 @@ export const auth = {
                 return null;
             }
 
-            console.log('Auth - Utilisateur récupéré avec succès');
+            // Extraire les informations utilisateur de manière optimisée
+            let firstName = '';
+            let lastName = '';
+            let fullName = '';
+
+            // 1. Essayer user_metadata
+            if (user.user_metadata) {
+                firstName = user.user_metadata.firstName || user.user_metadata.given_name || '';
+                lastName = user.user_metadata.lastName || user.user_metadata.family_name || '';
+                fullName = user.user_metadata.name || user.user_metadata.full_name || '';
+            }
+
+            // 2. Essayer raw_user_meta_data (providers OAuth)
+            if (!firstName && !lastName && (user as any).raw_user_meta_data) {
+                firstName = (user as any).raw_user_meta_data.first_name || (user as any).raw_user_meta_data.given_name || '';
+                lastName = (user as any).raw_user_meta_data.last_name || (user as any).raw_user_meta_data.family_name || '';
+                fullName = (user as any).raw_user_meta_data.name || (user as any).raw_user_meta_data.full_name || '';
+            }
+
+            // 3. Extraire du nom complet si nécessaire
+            if (fullName && (!firstName || !lastName)) {
+                const nameParts = fullName.trim().split(' ');
+                if (nameParts.length >= 2) {
+                    firstName = firstName || nameParts[0];
+                    lastName = lastName || nameParts.slice(1).join(' ');
+                } else if (nameParts.length === 1) {
+                    firstName = firstName || nameParts[0];
+                }
+            }
+
+            // 4. Fallback
+            if (!firstName && !lastName) {
+                const emailPrefix = user.email?.split('@')[0] || 'Utilisateur';
+                firstName = emailPrefix;
+                lastName = 'Anonyme';
+            }
+
+            if (!firstName) firstName = 'Utilisateur';
+            if (!lastName) lastName = 'Anonyme';
+
+            console.log('Auth - Utilisateur récupéré avec succès:', {
+                id: user.id,
+                email: user.email,
+                firstName,
+                lastName,
+                fullName
+            });
+
             return {
                 id: user.id,
                 email: user.email!,
-                name: user.user_metadata.name,
-                firstName: user.user_metadata.firstName,
-                lastName: user.user_metadata.lastName
+                name: fullName || `${firstName} ${lastName}`,
+                firstName,
+                lastName
             };
         } catch (error) {
             console.error('Auth - Erreur lors de la récupération de l\'utilisateur:', error);
