@@ -105,7 +105,7 @@ export default function RootLayout({
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 pb-16 md:pb-0">{children}</main>
+            <main className="flex-1 pb-20 md:pb-0 min-h-screen">{children}</main>
 
             {/* Footer */}
             <footer className="border-t bg-white py-6 md:py-0">

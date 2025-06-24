@@ -121,3 +121,41 @@
   --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
+
+/* Améliorations responsive */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Optimisations pour mobile */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Réduire les espacements sur mobile */
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+  
+  /* Optimiser les inputs sur mobile */
+  input, textarea, select {
+    font-size: 16px; /* Évite le zoom sur iOS */
+  }
+}
+
+/* Améliorer l'accessibilité sur mobile */
+@media (max-width: 768px) {
+  /* Augmenter la taille des boutons tactiles */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Optimiser les espacements */
+  .space-y-4 > * + * {
+    margin-top: 0.75rem;
+  }
+}
