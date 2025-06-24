@@ -78,17 +78,7 @@ export function useNotifications() {
           createdAt: n.createdAt
         }))
       })
-      // Vérifier s'il y a de nouvelles notifications
-      const currentNotificationIds = new Set(notifications.map(n => n.id))
-      const newNotifications = data.filter((n: Notification) => !currentNotificationIds.has(n.id))
       
-      if (newNotifications.length > 0) {
-        // Afficher une notification toast pour chaque nouvelle notification
-        newNotifications.forEach(notification => {
-          toast.info(notification.message)
-        })
-      }
-
       setNotifications(data)
     } catch (err) {
       console.error("[useNotifications] Erreur lors du chargement des notifications:", {
@@ -199,17 +189,65 @@ export function useNotifications() {
       }
     })
 
-    // Configurer le polling pour les notifications
-    const pollingInterval = setInterval(() => {
-      if (user) {
-        loadNotifications()
-      }
-    }, 30000) // Vérifier toutes les 30 secondes
+    // Abonnement en temps réel aux notifications
+    let realtimeSubscription: any = null
+    
+    if (user) {
+      console.log("[useNotifications] Configuration de l'abonnement temps réel pour l'utilisateur:", user.id)
+      
+      realtimeSubscription = supabase
+        .channel(`notifications:${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'Notification',
+            filter: `userId=eq.${user.id}`
+          },
+          (payload) => {
+            console.log("[useNotifications] Changement temps réel détecté:", payload)
+            
+            if (payload.eventType === 'INSERT') {
+              // Nouvelle notification
+              const newNotification = payload.new as Notification
+              console.log("[useNotifications] Nouvelle notification reçue:", newNotification)
+              
+              // Ajouter la nouvelle notification à la liste
+              setNotifications(prev => [newNotification, ...prev])
+              
+              // Afficher le toast seulement pour les nouvelles notifications
+              toast.info(newNotification.message)
+            } else if (payload.eventType === 'UPDATE') {
+              // Notification mise à jour (marquée comme lue, etc.)
+              const updatedNotification = payload.new as Notification
+              console.log("[useNotifications] Notification mise à jour:", updatedNotification)
+              
+              setNotifications(prev => 
+                prev.map(n => 
+                  n.id === updatedNotification.id ? updatedNotification : n
+                )
+              )
+            } else if (payload.eventType === 'DELETE') {
+              // Notification supprimée
+              const deletedNotification = payload.old as Notification
+              console.log("[useNotifications] Notification supprimée:", deletedNotification)
+              
+              setNotifications(prev => 
+                prev.filter(n => n.id !== deletedNotification.id)
+              )
+            }
+          }
+        )
+        .subscribe()
+    }
 
     return () => {
       console.log("[useNotifications] Nettoyage de l'effet")
       authListener?.subscription.unsubscribe()
-      clearInterval(pollingInterval)
+      if (realtimeSubscription) {
+        realtimeSubscription.unsubscribe()
+      }
     }
   }, [user])
 

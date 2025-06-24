@@ -36,7 +36,7 @@ export default function Home() {
             </div>
             {/* Image */}
             <div className="flex items-center justify-center mt-8 lg:mt-0">
-              <div className="relative w-full max-w-[350px] aspect-square overflow-hidden rounded-2xl shadow-2xl">
+              <div className="relative w-full max-w-[400px] aspect-square overflow-hidden rounded-2xl shadow-2xl">
                 <Image
                   src="/anniv1.avif"
                   alt="Célébration d'anniversaire"
