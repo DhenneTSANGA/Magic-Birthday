@@ -123,6 +123,14 @@ export default function CreerEvenementPage() {
   ) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+    
+    // Fermer automatiquement le calendrier après sélection d'une date
+    if (name === 'date' && value) {
+      // Utiliser setTimeout pour permettre à l'événement de se terminer
+      setTimeout(() => {
+        e.target.blur()
+      }, 100)
+    }
   }
 
   return (
