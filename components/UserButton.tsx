@@ -110,14 +110,14 @@ export function UserButton() {
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="text-xs sm:text-sm"
+                    className="text-[10px] sm:text-sm"
                     onClick={() => router.push("/sign-in")}
                 >
                     Connexion
                 </Button>
                 <Button
                     size="sm"
-                    className="text-xs sm:text-sm"
+                    className="text-[10px] sm:text-sm"
                     onClick={() => router.push("/sign-up")}
                 >
                     Inscription
