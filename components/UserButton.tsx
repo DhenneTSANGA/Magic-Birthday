@@ -109,11 +109,15 @@ export function UserButton() {
             <div className="flex items-center gap-2">
                 <Button
                     variant="ghost"
+                    size="sm"
+                    className="text-xs sm:text-sm"
                     onClick={() => router.push("/sign-in")}
                 >
                     Connexion
                 </Button>
                 <Button
+                    size="sm"
+                    className="text-xs sm:text-sm"
                     onClick={() => router.push("/sign-up")}
                 >
                     Inscription
