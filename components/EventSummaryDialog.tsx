@@ -74,18 +74,24 @@ export function EventSummaryDialog({ isOpen, onClose, eventData }: EventSummaryD
     return (
         <Dialog 
             open={isOpen} 
-            onOpenChange={() => {}} 
+            onOpenChange={onClose} 
             modal={true}
         >
             <DialogContent 
                 className="sm:max-w-[350px]"
-                onPointerDownOutside={(e) => e.preventDefault()}
-                onEscapeKeyDown={(e) => e.preventDefault()}
             >
-                <DialogHeader>
+                <DialogHeader className="relative">
                     <DialogTitle className="text-center text-xl font-bold text-primary">
                         Événement créé avec succès !
                     </DialogTitle>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onClose}
+                        className="absolute right-0 top-0 h-6 w-6"
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
                 </DialogHeader>
                 <div className="mt-3 space-y-3">
                     <div className="rounded-lg border bg-card p-3">
