@@ -7,6 +7,8 @@ export async function GET(request: Request) {
     const code = requestUrl.searchParams.get('code');
     const callbackUrl = requestUrl.searchParams.get('callbackUrl');
 
+    console.log('[OAuth Callback] callbackUrl:', callbackUrl, '| code:', code, '| requestUrl:', requestUrl.toString());
+
     if (code) {
         const cookieStore = await cookies();
         const supabase = createServerClient(

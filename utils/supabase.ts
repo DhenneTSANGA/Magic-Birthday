@@ -16,6 +16,14 @@ export const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+function getOAuthRedirectUrl(callbackUrl: string) {
+    const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
+    const base = isLocal
+        ? 'http://localhost:3000'
+        : 'https://magic-birthday.vercel.app';
+    return `${base}/auth/callback?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+}
+
 // Service d'authentification
 export const auth = {
     supabase,
@@ -91,7 +99,7 @@ export const auth = {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'github',
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback?callbackUrl=${encodeURIComponent(callbackUrl)}`
+                    redirectTo: getOAuthRedirectUrl(callbackUrl)
                 }
             });
 
@@ -107,11 +115,12 @@ export const auth = {
 
     async loginWithGoogle(callbackUrl = '/') {
         try {
-            console.log('Auth - Tentative de connexion avec Google...');
+            const redirectTo = getOAuthRedirectUrl(callbackUrl);
+            console.log('[OAuth Google] callbackUrl:', callbackUrl, '| redirectTo:', redirectTo);
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback?callbackUrl=${encodeURIComponent(callbackUrl)}`
+                    redirectTo
                 }
             });
 
