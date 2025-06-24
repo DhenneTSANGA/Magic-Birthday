@@ -44,15 +44,28 @@ export function useNotifications() {
         ok: response.ok
       })
 
+      const contentType = response.headers.get("content-type");
       if (!response.ok) {
-        const errorData = await response.json() as ApiError
+        let errorData: ApiError = { error: "Erreur inconnue" };
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            errorData = await response.json();
+          } catch (jsonErr) {
+            console.error("[useNotifications] Impossible de parser l'erreur JSON:", jsonErr);
+          }
+        } else {
+          // Réponse non JSON (probablement HTML)
+          const text = await response.text();
+          console.error("[useNotifications] Erreur serveur non-JSON:", text);
+          errorData = { error: "Erreur serveur: réponse non-JSON", details: text };
+        }
         console.error("[useNotifications] Erreur serveur:", {
           status: response.status,
           error: errorData
-        })
+        });
         throw new Error(
           errorData.details || errorData.error || "Erreur lors de la récupération des notifications"
-        )
+        );
       }
 
       const data = await response.json()
