@@ -5,22 +5,24 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
     const requestUrl = new URL(request.url);
     const code = requestUrl.searchParams.get('code');
+    const callbackUrl = requestUrl.searchParams.get('callbackUrl');
 
     if (code) {
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
                 cookies: {
-                    get(name: string) {
-                        return cookieStore.get(name)?.value;
+                    async get(name: string) {
+                        const cookie = await cookieStore.get(name);
+                        return cookie?.value;
                     },
-                    set(name: string, value: string, options: CookieOptions) {
-                        cookieStore.set({ name, value, ...options });
+                    async set(name: string, value: string, options: CookieOptions) {
+                        await cookieStore.set(name, value, options);
                     },
-                    remove(name: string, options: CookieOptions) {
-                        cookieStore.set({ name, value: '', ...options });
+                    async remove(name: string, options: CookieOptions) {
+                        await cookieStore.delete(name, options);
                     },
                 },
             }
@@ -31,5 +33,5 @@ export async function GET(request: Request) {
     }
 
     // URL to redirect to after sign in process completes
-    return NextResponse.redirect(new URL('/', requestUrl.origin));
+    return NextResponse.redirect(new URL(callbackUrl || '/', requestUrl.origin));
 } 

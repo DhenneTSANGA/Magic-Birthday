@@ -55,7 +55,8 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     const handleGitHubLogin = async () => {
         try {
-            await auth.loginWithGitHub();
+            const callbackUrl = searchParams.get('callbackUrl') || '/';
+            await auth.loginWithGitHub(callbackUrl);
             // La redirection sera gérée par le callback OAuth
         } catch (error) {
             console.error('Erreur lors de la connexion avec GitHub:', error);
@@ -65,7 +66,8 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     const handleGoogleLogin = async () => {
         try {
-            await auth.loginWithGoogle();
+            const callbackUrl = searchParams.get('callbackUrl') || '/';
+            await auth.loginWithGoogle(callbackUrl);
             // La redirection sera gérée par le callback OAuth
         } catch (error) {
             console.error('Erreur lors de la connexion avec Google:', error);

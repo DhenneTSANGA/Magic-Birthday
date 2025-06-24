@@ -85,13 +85,13 @@ export const auth = {
         }
     },
 
-    async loginWithGitHub() {
+    async loginWithGitHub(callbackUrl = '/') {
         try {
             console.log('Auth - Tentative de connexion avec GitHub...');
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'github',
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback`
+                    redirectTo: `${window.location.origin}/auth/callback?callbackUrl=${encodeURIComponent(callbackUrl)}`
                 }
             });
 
@@ -105,13 +105,13 @@ export const auth = {
         }
     },
 
-    async loginWithGoogle() {
+    async loginWithGoogle(callbackUrl = '/') {
         try {
             console.log('Auth - Tentative de connexion avec Google...');
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback`
+                    redirectTo: `${window.location.origin}/auth/callback?callbackUrl=${encodeURIComponent(callbackUrl)}`
                 }
             });
 
