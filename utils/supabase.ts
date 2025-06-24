@@ -99,7 +99,7 @@ export const auth = {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'github',
                 options: {
-                    redirectTo: getOAuthRedirectUrl(callbackUrl)
+                    redirectTo: `${window.location.origin}/auth/callback`
                 }
             });
 
@@ -120,7 +120,7 @@ export const auth = {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo
+                    redirectTo : `${window.location.origin}/auth/callback`
                 }
             });
 
