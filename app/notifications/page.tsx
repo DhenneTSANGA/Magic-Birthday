@@ -98,6 +98,7 @@ export default function NotificationsPage() {
     try {
       const response = await fetch(`/api/notifications/${notificationId}`, {
         method: "DELETE",
+        credentials: 'include',
       })
 
       if (!response.ok) {

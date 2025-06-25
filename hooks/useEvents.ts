@@ -147,6 +147,7 @@ export function useEvents() {
       setError(null)
       const response = await fetch(`/api/events/${code}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
       
       if (!response.ok) {

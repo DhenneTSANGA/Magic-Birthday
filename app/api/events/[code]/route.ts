@@ -31,8 +31,9 @@ export async function GET(
     // Vérifier l'authentification
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
+      console.error('[API][events] Non authentifié', { authError, user })
       return NextResponse.json(
-        { error: 'Non autorisé' },
+        { error: 'Non autorisé', details: 'Utilisateur non authentifié' },
         { status: 401 }
       )
     }
@@ -62,8 +63,9 @@ export async function GET(
 
     // Vérifier que l'utilisateur est le propriétaire de l'événement
     if (event.userId !== user.id) {
+      console.error('[API][events] Accès refusé : utilisateur non propriétaire', { eventUserId: event.userId, userId: user.id })
       return NextResponse.json(
-        { error: 'Non autorisé' },
+        { error: 'Non autorisé', details: 'Vous n\'êtes pas le propriétaire de cet événement' },
         { status: 403 }
       )
     }

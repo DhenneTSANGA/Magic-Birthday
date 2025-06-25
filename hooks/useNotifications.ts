@@ -145,6 +145,7 @@ export function useNotifications() {
       console.log("[useNotifications] Suppression des notifications:", notificationIds)
       const response = await fetch(`/api/notifications/${notificationIds.join(",")}`, {
         method: "DELETE",
+        credentials: 'include',
       })
 
       if (!response.ok) {

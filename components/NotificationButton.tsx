@@ -49,7 +49,7 @@ export function NotificationButton() {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteNotifications([id])
+      await deleteNotifications([id], { credentials: 'include' })
       toast.success("Notification supprimée")
     } catch (error) {
       toast.error("Erreur lors de la suppression de la notification")
@@ -61,7 +61,7 @@ export function NotificationButton() {
       const readIds = notifications
         .filter(n => n.read)
         .map(n => n.id)
-      await deleteNotifications(readIds)
+      await deleteNotifications(readIds, { credentials: 'include' })
       toast.success("Notifications lues supprimées")
     } catch (error) {
       toast.error("Erreur lors de la suppression des notifications")
@@ -71,7 +71,7 @@ export function NotificationButton() {
   const handleDeleteAll = async () => {
     try {
       const allIds = notifications.map(n => n.id)
-      await deleteNotifications(allIds)
+      await deleteNotifications(allIds, { credentials: 'include' })
       toast.success("Toutes les notifications ont été supprimées")
     } catch (error) {
       toast.error("Erreur lors de la suppression des notifications")

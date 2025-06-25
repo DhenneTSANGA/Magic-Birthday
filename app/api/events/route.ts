@@ -70,11 +70,33 @@ function extractUserInfo(user: any) {
 // GET /api/events - Récupérer tous les événements de l'utilisateur
 export async function GET(request: NextRequest) {
   try {
-    // Récupérer tous les événements publics avec leurs commentaires et informations utilisateur
+    // Authentifier l'utilisateur
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          async get(name: string) {
+            const cookie = cookieStore.get(name)
+            return cookie?.value
+          },
+        },
+      }
+    )
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      console.error('[API][events] Non authentifié', { authError, user })
+      return NextResponse.json(
+        { error: 'Non autorisé', details: 'Utilisateur non authentifié' },
+        { status: 401 }
+      )
+    }
+
+    // Récupérer uniquement les événements créés par l'utilisateur connecté
     const events = await prisma.event.findMany({
       where: {
-        type: 'PUBLIC',
-        status: 'PUBLISHED'
+        userId: user.id,
       },
       include: {
         createdBy: {

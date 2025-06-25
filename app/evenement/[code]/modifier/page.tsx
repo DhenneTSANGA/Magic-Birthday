@@ -115,6 +115,7 @@ export default function ModifierEvenementPage({ params }: { params: { code: stri
     try {
       const response = await fetch(`/api/events/${params.code}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
 
       if (!response.ok) {

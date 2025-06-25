@@ -106,6 +106,7 @@ export default function MesEvenementsPage() {
     try {
       const response = await fetch(`/api/events/${code}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
 
       if (!response.ok) {

@@ -45,35 +45,17 @@ export async function GET(request: NextRequest) {
     )
 
     // Vérifier la session
-    console.log("[API] Vérification de la session")
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError) {
-      console.error("[API] Erreur de session:", {
-        error: sessionError,
-        message: sessionError.message,
-        status: sessionError.status
-      })
-      return NextResponse.json({ 
-        error: "Non autorisé", 
-        details: sessionError.message,
-        code: sessionError.status 
-      }, { status: 401 })
-    }
-    
-    if (!session) {
-      console.error("[API] Pas de session")
-      return NextResponse.json({ 
-        error: "Non autorisé", 
-        details: "Aucune session active" 
-      }, { status: 401 })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      console.error('[API][notifications] Non authentifié', { authError, user })
+      return NextResponse.json({ error: 'Non autorisé', details: 'Utilisateur non authentifié' }, { status: 401 })
     }
 
-    console.log("[API] Session valide, userId:", session.user.id)
+    console.log("[API] Session valide, userId:", user.id)
 
     try {
       console.log("[API] Appel du service de notifications")
-      const notifications = await notificationService.getForUser(session.user.id)
+      const notifications = await notificationService.getForUser(user.id)
       console.log("[API] Notifications récupérées:", { count: notifications.length })
       return NextResponse.json(notifications)
     } catch (dbError) {
@@ -132,15 +114,15 @@ export async function POST(request: NextRequest) {
     )
 
     // Vérifier la session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
     const body = await request.json()
     const notification = await notificationService.create({
       ...body,
-      userId: session.user.id,
+      userId: user.id,
     })
 
     return NextResponse.json(notification)
@@ -175,8 +157,8 @@ export async function PATCH(request: NextRequest) {
     )
 
     // Vérifier la session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
