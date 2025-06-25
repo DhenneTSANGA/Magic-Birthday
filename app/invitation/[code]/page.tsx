@@ -68,6 +68,10 @@ export default function InvitationPage({ params }: { params: { code: string } })
       setAccepting(true)
       const response = await fetch(`/api/invitations/${params.code}`, {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'accept' }),
       })
 
       if (!response.ok) {

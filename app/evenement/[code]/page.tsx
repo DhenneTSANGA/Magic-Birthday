@@ -260,21 +260,6 @@ export default async function EventPage({ params }: EventPageProps) {
 
           {/* Code et lien de partage */}
           <EventShareCard event={event} />
-
-          {/* Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button className="w-full" variant="outline">
-                Partager l'événement
-              </Button>
-              <Button className="w-full" variant="outline">
-                Ajouter à mon calendrier
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
