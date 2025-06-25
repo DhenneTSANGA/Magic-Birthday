@@ -4,7 +4,7 @@ import "@/app/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "sonner"
 import Link from "next/link"
-import { PartyPopper, Calendar, Gift, MessageCircle } from "lucide-react"
+import { PartyPopper, Calendar, Gift, MessageCircle, Mail } from "lucide-react"
 import { ThemeSelector } from "@/components/theme-selector"
 import { UserButton } from "@/components/UserButton"
 import Image from "next/image"
@@ -66,6 +66,12 @@ export default function RootLayout({
                     Mes événements
                   </Link>
                   <Link
+                    href="/invitations"
+                    className="text-sm font-medium text-gray-600 transition-colors hover:text-primary"
+                  >
+                    Mes invitations
+                  </Link>
+                  <Link
                     href="/communaute"
                     className="text-sm font-medium text-gray-600 transition-colors hover:text-primary"
                   >
@@ -84,7 +90,7 @@ export default function RootLayout({
 
             {/* Mobile Navigation */}
             <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white md:hidden">
-              <div className="grid grid-cols-4 items-center">
+              <div className="grid grid-cols-5 items-center">
                 <Link href="/" className="flex flex-col items-center py-2">
                   <PartyPopper className="h-5 w-5 text-gray-600" />
                   <span className="text-xs text-gray-600">Accueil</span>
@@ -96,6 +102,10 @@ export default function RootLayout({
                 <Link href="/mes-evenements" className="flex flex-col items-center py-2">
                   <Gift className="h-5 w-5 text-gray-600" />
                   <span className="text-xs text-gray-600">Événements</span>
+                </Link>
+                <Link href="/invitations" className="flex flex-col items-center py-2">
+                  <Mail className="h-5 w-5 text-gray-600" />
+                  <span className="text-xs text-gray-600">Invitations</span>
                 </Link>
                 <Link href="/communaute" className="flex flex-col items-center py-2">
                   <MessageCircle className="h-5 w-5 text-gray-600" />
@@ -119,6 +129,7 @@ export default function RootLayout({
                         { href: "/", label: "Accueil" },
                         { href: "/creer-evenement", label: "Créer un événement" },
                         { href: "/mes-evenements", label: "Mes événements" },
+                        { href: "/invitations", label: "Mes invitations" },
                         { href: "/communaute", label: "Communauté" },
                       ].map((item, index) => (
                         <li key={`nav-${index}`}>
