@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
-import { notificationService } from "@/lib/notifications"
 
 // GET /api/invitations/[code] - Vérifier une invitation
 export async function GET(
@@ -41,13 +40,13 @@ export async function GET(
   }
 }
 
-// POST /api/invitations/[code] - Accepter une invitation
+// POST /api/invitations/[code] - Accepter ou refuser une invitation
 export async function POST(
   request: NextRequest,
   { params }: { params: { code: string } }
 ) {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -55,12 +54,6 @@ export async function POST(
         cookies: {
           get(name: string) {
             return cookieStore.get(name)?.value
-          },
-          set(name: string, value: string, options: any) {
-            cookieStore.set(name, value, options)
-          },
-          remove(name: string, options: any) {
-            cookieStore.delete(name, options)
           },
         },
       }
@@ -75,6 +68,34 @@ export async function POST(
       )
     }
 
+    // Récupérer le body de la requête
+    const body = await request.json()
+    const action = body.action || 'accept' // Par défaut, accepter
+
+    // Vérifier si l'utilisateur existe dans Prisma
+    let prismaUser = await prisma.user.findUnique({
+      where: { id: user.id }
+    })
+
+    // Créer l'utilisateur s'il n'existe pas
+    if (!prismaUser) {
+      const userInfo = {
+        firstName: user.user_metadata?.firstName || user.user_metadata?.given_name || '',
+        lastName: user.user_metadata?.lastName || user.user_metadata?.family_name || '',
+        email: user.email || ''
+      }
+      
+      prismaUser = await prisma.user.create({
+        data: {
+          id: user.id,
+          email: userInfo.email,
+          firstName: userInfo.firstName,
+          lastName: userInfo.lastName,
+          password: '',
+        }
+      })
+    }
+
     // Récupérer l'événement
     const event = await prisma.event.findUnique({
       where: { code: params.code },
@@ -87,7 +108,7 @@ export async function POST(
           },
         },
         invites: {
-          where: { userId: user.id },
+          where: { userId: prismaUser.id },
         },
       },
     })
@@ -99,12 +120,15 @@ export async function POST(
       )
     }
 
+    // Déterminer le statut selon l'action
+    const status = action === 'decline' ? 'DECLINED' : 'ACCEPTED'
+
     // Vérifier si l'utilisateur est déjà invité
     if (event.invites.length > 0) {
       const invite = event.invites[0]
-      if (invite.status === "ACCEPTED") {
+      if (invite.status === status) {
         return NextResponse.json(
-          { error: "Vous avez déjà accepté cette invitation" },
+          { error: action === 'decline' ? "Vous avez déjà refusé cette invitation" : "Vous avez déjà accepté cette invitation" },
           { status: 400 }
         )
       }
@@ -115,30 +139,35 @@ export async function POST(
       where: {
         eventId_userId: {
           eventId: event.id,
-          userId: user.id,
+          userId: prismaUser.id,
         },
       },
       update: {
-        status: "ACCEPTED",
+        status: status,
       },
       create: {
         eventId: event.id,
-        userId: user.id,
-        status: "ACCEPTED",
+        userId: prismaUser.id,
+        status: status,
       },
     })
 
-    // Notifier le créateur de l'événement
-    await notificationService.create({
-      userId: event.createdBy.id,
-      type: "update",
-      message: `${user.user_metadata.firstName} ${user.user_metadata.lastName} a accepté votre invitation à l'événement "${event.name}"`,
-      eventId: event.id,
+    // Créer une notification pour le créateur de l'événement
+    const userDisplayName = `${prismaUser.firstName} ${prismaUser.lastName}`
+    const actionText = action === 'decline' ? 'refusé' : 'accepté'
+    
+    await prisma.notification.create({
+      data: {
+        userId: event.createdBy.id,
+        type: "update",
+        message: `${userDisplayName} a ${actionText} votre invitation à l'événement "${event.name}"`,
+        eventId: event.id,
+      },
     })
 
     return NextResponse.json({ invite })
   } catch (error) {
-    console.error("Erreur lors de l'acceptation de l'invitation:", error)
+    console.error("Erreur lors du traitement de l'invitation:", error)
     return NextResponse.json(
       { error: "Erreur serveur" },
       { status: 500 }

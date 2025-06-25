@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Calendar, Clock, MapPin, PartyPopper } from "lucide-react"
+import { Calendar, Clock, MapPin, PartyPopper, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -31,6 +31,7 @@ export default function InvitationPage({ params }: { params: { code: string } })
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const [accepting, setAccepting] = useState(false)
+  const [declining, setDeclining] = useState(false)
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -84,6 +85,32 @@ export default function InvitationPage({ params }: { params: { code: string } })
     }
   }
 
+  const handleDecline = async () => {
+    try {
+      setDeclining(true)
+      const response = await fetch(`/api/invitations/${params.code}`, {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'decline' }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Erreur lors du refus de l'invitation")
+      }
+
+      toast.success("Invitation refusée")
+      router.push('/invitations')
+    } catch (error) {
+      console.error("Error declining invitation:", error)
+      toast.error(error instanceof Error ? error.message : "Erreur lors du refus de l'invitation")
+    } finally {
+      setDeclining(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-4 px-2 md:py-8 md:px-4">
@@ -131,8 +158,8 @@ export default function InvitationPage({ params }: { params: { code: string } })
             <Image
               src="/logo anniv.png"
               alt="Logo Magic Birthday"
-              width={64}
-              height={64}
+              width={120}
+              height={120}
               className="mx-auto mb-4"
             />
             <CardTitle className="text-xl md:text-2xl">Vous êtes invité(e) !</CardTitle>
@@ -180,9 +207,15 @@ export default function InvitationPage({ params }: { params: { code: string } })
               variant="outline"
               className="w-full"
               size="lg"
-              onClick={() => router.push(`/evenement/${params.code}`)}
+              onClick={handleDecline}
+              disabled={declining}
             >
-              Voir les détails de l'événement
+              {declining ? "Refus en cours..." : (
+                <>
+                  <X className="mr-2 h-4 w-4" />
+                  Refuser l'invitation
+                </>
+              )}
             </Button>
           </CardFooter>
         </Card>
