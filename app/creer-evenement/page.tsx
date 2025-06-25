@@ -131,6 +131,14 @@ export default function CreerEvenementPage() {
         e.target.blur()
       }, 100)
     }
+    
+    // Fermer automatiquement le sélecteur d'heure après sélection d'une heure
+    if (name === 'time' && value) {
+      // Utiliser un délai plus long pour permettre la sélection de l'heure ET des minutes
+      setTimeout(() => {
+        e.target.blur()
+      }, 500)
+    }
   }
 
   return (

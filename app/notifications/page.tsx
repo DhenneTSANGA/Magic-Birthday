@@ -220,15 +220,6 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {notification.eventId && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/evenement/${notification.eventId}`)}
-                      >
-                        Voir
-                      </Button>
-                    )}
                     {!notification.read && (
                       <Button
                         variant="ghost"
@@ -289,22 +280,15 @@ export default function NotificationsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {notification.eventId && (
+                      {!notification.read && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => router.push(`/evenement/${notification.eventId}`)}
+                          onClick={() => markAsRead(notification.id)}
                         >
-                          Voir
+                          Marquer comme lu
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        Marquer comme lu
-                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
