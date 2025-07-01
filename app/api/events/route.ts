@@ -70,6 +70,12 @@ function extractUserInfo(user: any) {
 // GET /api/events - Récupérer tous les événements de l'utilisateur
 export async function GET(request: NextRequest) {
   try {
+    // Pagination
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = parseInt(searchParams.get('limit') || '9', 10)
+    const skip = (page - 1) * limit
+
     // Authentifier l'utilisateur
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -93,46 +99,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Récupérer uniquement les événements créés par l'utilisateur connecté
-    const events = await prisma.event.findMany({
-      where: {
-        userId: user.id,
-      },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatar: true
-          }
-        },
-        comments: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                avatar: true
-              }
-            }
+    // Récupérer les événements paginés et le total
+    const [events, total] = await Promise.all([
+      prisma.event.findMany({
+        where: { userId: user.id },
+        include: {
+          createdBy: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+          comments: {
+            include: {
+              author: { select: { id: true, firstName: true, lastName: true, avatar: true } }
+            },
+            orderBy: { createdAt: 'desc' }
           },
-          orderBy: {
-            createdAt: 'desc'
-          }
+          _count: { select: { invites: true, comments: true } }
         },
-        _count: {
-          select: {
-            invites: true,
-            comments: true
-          }
-        }
-      },
-      orderBy: {
-        date: 'asc'
-      }
-    })
+        orderBy: { date: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.event.count({ where: { userId: user.id } })
+    ])
 
     // Formater les données pour l'affichage
     const formattedEvents = events.map(event => ({
@@ -168,7 +154,12 @@ export async function GET(request: NextRequest) {
       }
     }))
 
-    return NextResponse.json(formattedEvents)
+    return NextResponse.json({
+      events: formattedEvents,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    })
   } catch (error) {
     console.error('Error fetching events:', error)
     return NextResponse.json(

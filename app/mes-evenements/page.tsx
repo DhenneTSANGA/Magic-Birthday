@@ -28,36 +28,59 @@ function getEventColor(code: string) {
   return eventColors[index]
 }
 
+// Définition du type Event pour la pagination
+interface Event {
+  id: string;
+  code: string;
+  title: string;
+  description?: string;
+  date: string;
+  time: string;
+  location: string;
+  maxGuests?: number;
+  type?: string;
+  status?: string;
+  createdAt?: string;
+  createdBy: {
+    id: string;
+    name: string;
+    avatar?: string | null;
+  };
+  comments?: any[];
+  stats?: {
+    inviteCount: number;
+    commentCount: number;
+  };
+}
+
 export default function MesEvenementsPage() {
   const router = useRouter()
-  const [events, setEvents] = useState([])
+  const [events, setEvents] = useState<Event[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (pageToFetch = 1) => {
+    setIsLoading(true)
     try {
-      console.log('Début de la récupération des événements...')
-      const response = await fetch('/api/events', {
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
+      const response = await fetch(`/api/events?page=${pageToFetch}&limit=9`, {
+        headers: { 'Cache-Control': 'no-cache' },
       })
-      console.log('Réponse de l\'API:', response.status)
-
       if (!response.ok) {
         const errorData = await response.json()
         console.error('Erreur API:', errorData)
         throw new Error(errorData.error || 'Erreur lors de la récupération des événements')
       }
-
       const data = await response.json()
-      console.log('Événements récupérés:', data)
-      setEvents(data)
+      setEvents(data.events)
+      setTotalPages(data.totalPages)
+      setPage(data.page)
     } catch (error) {
       console.error('Erreur détaillée:', error)
       toast.error('Erreur lors de la récupération des événements')
-      setEvents([]) // Réinitialiser les événements en cas d'erreur
+      setEvents([])
     } finally {
       setIsLoading(false)
     }
@@ -66,34 +89,23 @@ export default function MesEvenementsPage() {
   useEffect(() => {
     const checkAuthAndFetchEvents = async () => {
       try {
-        console.log('Vérification de l\'authentification...')
         const { data: { user }, error: authError } = await supabase.auth.getUser()
-        
-        if (authError) {
-          console.error('Erreur d\'authentification:', authError)
-          throw authError
-        }
-
+        if (authError) throw authError
         if (!user) {
-          console.log('Utilisateur non connecté')
           toast.error('Veuillez vous connecter pour voir vos événements')
           router.push('/sign-in?callbackUrl=/mes-evenements')
           return
         }
-
-        console.log('Utilisateur authentifié:', user.id)
-        await fetchEvents()
+        await fetchEvents(page)
       } catch (error) {
-        console.error('Erreur lors de la vérification de l\'authentification:', error)
         toast.error('Erreur d\'authentification')
         setIsLoading(false)
       }
     }
-
     checkAuthAndFetchEvents()
-  }, [router])
+  }, [router, page])
 
-  const handleEdit = (event) => {
+  const handleEdit = (event: Event) => {
     setSelectedEvent(event)
     setShowEditDialog(true)
   }
@@ -198,6 +210,19 @@ export default function MesEvenementsPage() {
           </Card>
         ))}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6 gap-2">
+          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+            Précédent
+          </Button>
+          <span className="px-2 text-sm">Page {page} / {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+            Suivant
+          </Button>
+        </div>
+      )}
 
       {selectedEvent && (
         <EventEditDialog
