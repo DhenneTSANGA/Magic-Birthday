@@ -152,7 +152,7 @@ export default function MesEvenementsPage() {
             )}
           >
             <CardHeader>
-              <CardTitle>{event.name}</CardTitle>
+              <CardTitle>{event.title}</CardTitle>
               <CardDescription className="dark:text-gray-300">
                 {formatDate(event.date)} à {event.time}
               </CardDescription>
