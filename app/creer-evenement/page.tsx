@@ -86,6 +86,8 @@ export default function CreerEvenementPage() {
 
       if (!response.ok) {
         const error = await response.json()
+        console.error('Erreur API lors de la création de l\'événement:', error)
+        toast.error('Erreur API: ' + (error.error || JSON.stringify(error)))
         throw new Error(error.error || 'Erreur lors de la création de l\'événement')
       }
 
