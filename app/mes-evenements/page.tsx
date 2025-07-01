@@ -163,7 +163,7 @@ export default function MesEvenementsPage() {
               </p>
               <p className="text-sm mb-2 dark:text-gray-300">
                 <span className="font-medium">Créé par :</span>{' '}
-                {event.createdBy.firstName} {event.createdBy.lastName}
+                {event.createdBy.name}
               </p>
               <p className="text-sm dark:text-gray-300">{event.description}</p>
             </CardContent>
