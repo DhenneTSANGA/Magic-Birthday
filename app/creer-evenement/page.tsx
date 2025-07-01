@@ -103,7 +103,7 @@ export default function CreerEvenementPage() {
       setEventData({
         id: event.id,
         title: event.name,
-        date: formatDate(displayDate),
+        date: displayDate.toISOString(),
         location: event.location,
         description: event.description || undefined,
         code: event.code,
